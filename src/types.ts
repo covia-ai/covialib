@@ -1,3 +1,5 @@
+import { CANCELLED } from "dns";
+
 export interface VenueOptions {
   baseUrl?: string;
   venueId?: string;
@@ -63,9 +65,34 @@ export enum RunStatus {
   COMPLETE = "COMPLETE",
   FAILED = "FAILED",
   PENDING = "PENDING",
-  STARTED = "STARTED"
+  STARTED = "STARTED",
+  CANCELLED = "CANCELLED"
 }
 
+export interface JobData {
+  id?: string;
+  status?: string;
+  created?: string;
+  updated?: string;
+  input?: any;
+  output?: any;
+  [key: string]: any;
+}
+
+export interface StatusData {
+  url?:string;
+  ts?:string;
+  status?:string;
+  did?:string;
+  stats?:StatsData;
+
+}
+export interface StatsData {
+  assets?: number;
+  users?: number;
+  ops?: number;
+  jobs?: number;
+}
 export class CoviaError extends Error {
   public code: number | null;
 
