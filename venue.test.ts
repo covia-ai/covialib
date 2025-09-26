@@ -1,8 +1,8 @@
-import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus } from './src/index';
+import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus, StatusData } from './src/index';
 
  const venue = new Venue({
-          baseUrl: 'http://localhost:8080',
-          venueId: 'my-venue'
+          baseUrl: 'https://venue-test.covia.ai',
+          venueId: 'venue-test'
     });
 
 test('venueHasAssets', () => { 
@@ -17,17 +17,17 @@ test('venueHasAssetId', () => {
 });
 
 test('venueInvokeOp', () => {
-   return venue.getAsset('1821e02f84f24623cd8c05456230b457f475d7836147b9a88511577b3371bdac').then(operation => {
-    expect(operation).not.toBeNull();
-    operation.invoke({ length: "100" }).then((result) => {
-        expect(result.status).toBe('COMPLETE')
+   expect(venue.getAsset('1821e02f84f24623cd8c05456230b457f475d7836147b9a88511577b3371bdac')).resolves.not.toBeNull();
+    venue.getAsset('1821e02f84f24623cd8c05456230b457f475d7836147b9a88511577b3371bdac').then((operation) => {
+      expect(operation.id).not.toBeNull();
+       operation.run({ length: "10" }).then((result) => {
+        expect(result.status).toBe("COMPLETE")
         const jobId = result.id;
         venue.getJob(jobId).then((job) => {
-           expect(job.input).toEqual({ length: "100" })
+           expect(job.input).toEqual({ length: "10" })
         })
     })
-  });
-   
+    })
 });
 
 test('venuDataAsset', () => {
@@ -70,6 +70,46 @@ test('venueDoesNotHaveAssetId', () => {
 test('venueHasNoData', () => {
    expect(venue.getJob('xyz')).rejects.toEqual(new CoviaError('Request failed! status: 404'));
 });
+
+test('venueInvokeOpAndCancel', () => {
+   expect(venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630')).resolves.not.toBeNull();
+    venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630').then((operation) => {
+      expect(operation.id).not.toBeNull();
+       operation.run({ length: "10" }).then((result) => {
+       if(result.status == 'STARTED' || result.status == 'PENDING') {
+        const jobId = result.id;
+        venue.cancelJob(jobId).then((status) => {
+             expect(status).toBe(200)
+        })
+       
+       }
+      });
+    })
+});
+
+test('venueInvokeOpAndDelete', () => {
+   expect(venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630')).resolves.not.toBeNull();
+    venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630').then((operation) => {
+      expect(operation.id).not.toBeNull();
+       operation.run({ length: "10" }).then((result) => {
+       if(result.status == 'STARTED' || result.status == 'PENDING') {
+        const jobId = result.id;
+        venue.deleteJob(jobId).then((status) => {
+             expect(status).toBe(200)
+        })
+       
+       }
+      });
+    })
+});
+
+test('venueStatus', () => {
+   venue.getStats().then((stats:StatusData) => {
+      expect(stats?.status).toBe("OK");
+      expect(stats?.url).toBe("https://venue-test.covia.ai");
+      expect(stats?.did).toBe("did:web:venue-test.covia.ai");
+   })
+})
 
 const getSHA256Hash = async (input) => {
       const textAsBuffer = new TextEncoder().encode(input);

@@ -46,16 +46,6 @@ export interface OperationPayload {
   [key: string]: any;
 }
 
-export interface JobData {
-  id?: string;
-  status?: string;
-  created?: string;
-  updated?: string;
-  input?: any;
-  output?: any;
-  [key: string]: any;
-}
-
 export interface InvokePayload {
   assetId: AssetID;
   payload: OperationPayload;
