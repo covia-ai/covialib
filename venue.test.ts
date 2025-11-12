@@ -1,9 +1,23 @@
-import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus, StatusData } from './src/index';
+import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus, StatusData, Job, Grid } from './src/index';
 
- const venue = new Venue({
-          baseUrl: 'https://venue-test.covia.ai',
-          venueId: 'venue-test'
+let venue:Venue;
+
+beforeAll(async () => {
+      venue = await Grid.connect('did:web:venue-test.covia.ai'); // Replace with your async function
     });
+
+test('GridConnectWithUrl', () => { 
+  Grid.connect('https://venue-test.covia.ai/').then((venue:Venue) => {
+    expect(venue.venueId).toBe('did:web:venue-test.covia.ai');
+
+  })
+});
+test('GridConnectWithInvalidDid', () => { 
+  Grid.connect('did:web:venue-zzyaaa.covia.ai').then((response) => {
+    expect(response).toBe('Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.');
+    
+  })
+});
 
 test('venueHasAssets', () => { 
     venue.getAssets().then((assets) => {
@@ -23,8 +37,8 @@ test('venueInvokeOp', () => {
        operation.run({ length: "10" }).then((result) => {
         expect(result.status).toBe("COMPLETE")
         const jobId = result.id;
-        venue.getJob(jobId).then((job) => {
-           expect(job.input).toEqual({ length: "10" })
+        venue.getJob(jobId).then((job:Job) => {
+           expect(job?.metadata.input).toEqual({ length: "10" })
         })
     })
     })

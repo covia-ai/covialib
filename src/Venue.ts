@@ -1,11 +1,12 @@
-import { CoviaError, VenueOptions, AssetMetadata, JobData, VenueInterface, AssetID, StatsData, StatusData } from './types';
+import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatsData, StatusData, VenueConstructor } from './types';
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
 import { fetchStreamWithError, fetchWithError } from './Utils';
-import { CredentialsHTTP } from './Credentials';
+import { Credentials, CredentialsHTTP } from './Credentials';
 import { Resolver } from 'did-resolver'
 import { getResolver } from 'web-did-resolver'
+import { Job } from './Job';
 
 const webResolver = getResolver()
 const resolver = new Resolver(webResolver)
@@ -16,15 +17,21 @@ const cache = new Map<AssetID, any>();
 export class Venue implements VenueInterface {
   public baseUrl: string;
   public venueId: string;
-  public name: string;
+  public name: string;  
+  public credentials: Credentials;
   public metadata: AssetMetadata;
-
+  
   constructor(options: VenueOptions = {}) {
+    
+    
     this.baseUrl = options.baseUrl || 'https://venue-test.covia.ai';
     this.venueId = options.venueId || "default";
-    this.name = options.venueId || "default";
+    this.name = options.name || "default";
+    this.credentials  = options.credentials || new CredentialsHTTP(this.venueId,"","");
     this.metadata = {};
   }
+ 
+  
 
   /**
    * Static method to connect to a venue
@@ -38,25 +45,22 @@ export class Venue implements VenueInterface {
       // If it's already a Venue instance, return a new instance with the same configuration
       return new Venue({
         baseUrl: venueId.baseUrl,
-        venueId: venueId.venueId
+        venueId: venueId.venueId,
+        name: venueId.name,
+        credentials: credentials
       });
     }
 
     // If it's a string, determine if it's a URL or DNS name
     if (typeof venueId === 'string') {
       let baseUrl: string;
-      let venueIdStr: string;
-
       // Check if it's a valid HTTP/HTTPS URL
       if (venueId.startsWith('http:') || venueId.startsWith('https:')) {
         baseUrl = venueId;
-        // Extract venue ID from URL (could be domain name or path)
-        try {
-          const url = new URL(venueId);
-          venueIdStr = url.hostname || url.pathname || 'default';
-        } catch {
-          venueIdStr = 'default';
-        }
+        //If baseUrl ends with  / remove it
+        if(baseUrl.endsWith("/"))
+          baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+           
       } else if (venueId.startsWith('did:web:')) {
         // Resolve the DID document
         const didDoc = await resolver.resolve(venueId);
@@ -68,18 +72,18 @@ export class Venue implements VenueInterface {
           throw new CoviaError('No endpoint found for DID');
         }
         baseUrl = endpoint.toString().replace(/\/api\/v1/, '');
-        venueIdStr = venueId;
       } else {
         // Assume it's a DNS name or venue identifier
         baseUrl = `https://${venueId}`;
-        venueIdStr = venueId;
       }
-
-      return new Venue({
-        baseUrl,
-
-        venueId: venueIdStr
-      });
+    const data = await fetchWithError<StatusData>(baseUrl+'/api/v1/status');
+    return new Venue({
+            baseUrl,
+            venueId: data.did,
+            name: data.name,
+            credentials: credentials
+    });
+      
     }
 
     throw new CoviaError('Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.');
@@ -93,13 +97,26 @@ export class Venue implements VenueInterface {
   async createAsset(assetData: any): Promise<Asset> {
     return fetchWithError<any>(`${this.baseUrl}/api/v1/assets/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.setCredentialsInHeader(),
       body: JSON.stringify(assetData),
     }).then(response=>{return this.getAsset(response)});
   }
 
+  
+  /**
+   * Read stream from asset
+   * @param reader - ReadableStreamDefaultReader
+   */
+  async readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      // Process the 'value' (data chunk) here
+    }
+  }
+  
   /**
    * Get asset by ID
    * @param assetId - Asset identifier
@@ -145,25 +162,27 @@ export class Venue implements VenueInterface {
 
   /**
    * Get all jobs
-   * @returns {Promise<JobData[]>}
+   * @returns {Promise<string[]>}
    */
-  async getJobs(): Promise<JobData[]> {
-    return fetchWithError<JobData[]>(`${this.baseUrl}/api/v1/jobs`);
+  async getJobs(): Promise<string[]> {
+    return fetchWithError<string[]>(`${this.baseUrl}/api/v1/jobs`);
   }
 
   /**
    * Get job by ID
    * @param jobId - Job identifier
-   * @returns {Promise<JobData>}
+   * @returns {Promise<Job>}
    */
-  async getJob(jobId: string): Promise<JobData> {
-    return fetchWithError<JobData>(`${this.baseUrl}/api/v1/jobs/${jobId}`);
+  async getJob(jobId: string): Promise<Job> {
+    return fetchWithError<Job>(`${this.baseUrl}/api/v1/jobs/${jobId}`).then(data => {
+            return new Job(jobId, this, data);
+    });
   }
 
    /**
    * Cancel job by ID
    * @param jobId - Job identifier
-   * @returns {Promise<JobData>}
+   * @returns {Promise<number>}
    */
   async cancelJob(jobId: string):  Promise<number> {
      return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/cancel`, { method: 'PUT'})
@@ -175,7 +194,7 @@ export class Venue implements VenueInterface {
    /**
    * Delete job by ID
    * @param jobId - Job identifier
-   * @returns {Promise<JobData>}
+   * @returns {Promise<number>}
    */
   async deleteJob(jobId: string):  Promise<number> {
      return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/delete`, { method: 'PUT'})
@@ -184,20 +203,6 @@ export class Venue implements VenueInterface {
     });
   }
 
-  /**
-   * Get the DID (Decentralized Identifier) for this venue
-   * @returns {string} DID in the format did:web:domain
-   */
-  getDID(): string {
-    try {
-      const url = new URL(this.baseUrl);
-      const domain = url.hostname;
-      return `did:web:${domain}`;
-    } catch {
-      // Fallback if baseUrl is not a valid URL
-      return `did:web:${this.baseUrl.replace(/^https?:\/\//, '')}`;
-    }
-  }
 
     /**
    * Get the DID (Decentralized Identifier) for this venue
@@ -206,4 +211,105 @@ export class Venue implements VenueInterface {
   getStats():Promise<StatusData> {
       return fetchWithError<StatusData>(`${this.baseUrl}/api/v1/status`);
   }
+
+  
+    /**
+     * Get asset metadata
+     * @returns {Promise<AssetMetadata>}
+     */
+    async getMetadata(assetId:string): Promise<AssetMetadata> {
+      return await fetchWithError<AssetMetadata>(`${this.baseUrl}/api/v1/assets/${assetId}`);
+    }
+
+      /**
+   * Upload content to asset
+   * @param content - Content to upload
+   * @returns {Promise<ReadableStream<Uint8Array> | null>}
+   */
+  async uploadContent(content: BodyInit, assetId:string): Promise<ReadableStream<Uint8Array> | null> {
+    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
+      method: 'PUT',
+      headers: this.setCredentialsInHeader(),
+      body: content,
+    });
+    return response.body;
+  }
+
+  /**
+   * Get asset content
+   * @returns {Promise<ReadableStream<Uint8Array> | null>}
+   */
+  async getContent(assetId:string): Promise<ReadableStream<Uint8Array> | null> {
+    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`);
+    return response.body;
+  }
+
+  /**
+     * Execute the operation
+     * @param input - Operation input parameters
+     * @returns {Promise<any>}
+     */
+    async run(assetId:string,input: any ): Promise<any> {
+      const payload = {
+        operation: assetId,
+        input: input
+      };
+  
+      let customHeader = {};
+  
+      if(this.credentials.userId && this.credentials.userId != "") {
+          customHeader = {
+            'Content-Type': 'application/json',
+            'X-Covia-User' : this.credentials.userId,
+          }
+      }
+      else {
+           customHeader = {
+            'Content-Type': 'application/json'
+          }
+      }
+      try {
+        return  await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
+          method: 'POST',
+          headers: customHeader,
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        throw error;
+      }
+    }
+
+     /**
+     * Execute the operation
+     * @param input - Operation input parameters
+     * @returns {Promise<Job>}
+     */
+    async invoke(assetId:string,input: any ): Promise<Job> {
+      const payload = {
+        operation: assetId,
+        input: input
+      };
+      return fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
+        method: 'POST', 
+        headers: this.setCredentialsInHeader(),
+        body: JSON.stringify(payload),
+      }).catch(error => {
+        throw error;
+      });
+    }
+
+    private setCredentialsInHeader() : any{  
+      if(this.credentials.userId && this.credentials.userId != "") {
+          return  (
+            {
+              'Content-Type': 'application/json',
+              'X-Covia-User' : this.credentials.userId
+            }
+          )
+      }
+      else {
+           return ( {'Content-Type': 'application/json'})
+          }
+    }
 } 
+const _MyVenueCheck: VenueConstructor = Venue;

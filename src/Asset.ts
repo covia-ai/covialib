@@ -1,5 +1,4 @@
-import { CoviaError, AssetMetadata, RunStatus, OperationPayload, VenueInterface, AssetID } from './types';
-import { fetchWithError, fetchStreamWithError } from './Utils';
+import {  AssetMetadata, RunStatus, VenueInterface, AssetID } from './types';
 
 // Cache for storing asset data
 const cache = new Map<AssetID, AssetMetadata>();
@@ -21,17 +20,15 @@ export abstract class Asset {
    * Get asset metadata
    * @returns {Promise<AssetMetadata>}
    */
-  getMetadata(): Promise<AssetMetadata> {
+  async getMetadata(): Promise<AssetMetadata> {
     if (cache.has(this.id)) {
       return Promise.resolve(cache.get(this.id)!);
     } else {
-      return fetchWithError<AssetMetadata>(`${this.venue.baseUrl}/api/v1/assets/${this.id}`)
-        .then(data => {
-          if (data) {
-            cache.set(this.id, data);
-          }
-          return data;
-        });
+      const data = this.venue.getMetadata(this.id)
+      if (data) {
+        cache.set(this.id, data);
+      }
+      return data;
     }
   }
 
@@ -40,13 +37,7 @@ export abstract class Asset {
    * @param reader - ReadableStreamDefaultReader
    */
   async readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      // Process the 'value' (data chunk) here
-    }
+    return this.readStream(reader);
   }
 
   /**
@@ -55,13 +46,7 @@ export abstract class Asset {
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
   uploadContent(content: BodyInit): Promise<ReadableStream<Uint8Array> | null> {
-    return fetchStreamWithError(`${this.venue.baseUrl}/api/v1/assets/${this.id}/content`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-      },
-      body: content,
-    }).then(response => response.body);
+    return this.venue.uploadContent(this.id, content);
   }
 
   /**
@@ -69,8 +54,7 @@ export abstract class Asset {
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
   getContent(): Promise<ReadableStream<Uint8Array> | null> {
-    return fetchStreamWithError(`${this.venue.baseUrl}/api/v1/assets/${this.id}/content`)
-      .then(response => response.body);
+    return this.venue.getContent(this.id);
   }
 
   /**
@@ -87,23 +71,8 @@ export abstract class Asset {
    * @returns {Promise<any>}
    */
   run(input: any): Promise<any> {
-    const payload = {
-      operation: this.id,
-      input: input
-    };
 
-    return fetchWithError<any>(`${this.venue.baseUrl}/api/v1/invoke/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    }).catch(error => {
-      this.status = RunStatus.FAILED;
-      this.error = (error as Error).message;
-      throw error;
-    });
+    return this.venue.run( this.id, input);
   }
 }
 
-import { Venue } from './Venue'; 
