@@ -1,4 +1,4 @@
-import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatsData, StatusData, VenueConstructor } from './types';
+import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatsData, StatusData, VenueContructor, VenueConstructor } from './types';
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
