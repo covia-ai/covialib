@@ -1,5 +1,5 @@
 {
-  "name": "covialib_standalone",
+  "name": "covialib",
   "version": "1.0.0",
   "description": "This directory contains the TypeScript implementation of the Covia grid API, extracted from the original JavaScript implementation.",
   "main": "jest.config.js",
