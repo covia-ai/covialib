@@ -1,4 +1,4 @@
-import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatsData, StatusData, VenueContructor, VenueConstructor } from './types';
+import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatusData } from './types';
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
@@ -312,4 +312,3 @@ export class Venue implements VenueInterface {
           }
     }
 } 
-const _MyVenueCheck: VenueConstructor = Venue;

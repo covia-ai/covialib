@@ -1,43 +1,14 @@
 {
   "compilerOptions": {
-    // Target and Module
     "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
-    
-    // Module Resolution
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    
-    // Type Checking
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    
-    // Emit
+    "module": "commonjs",
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
-    
-    // Interop Constraints
-    "isolatedModules": true,
-    "allowJs": false,
+    "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "example.ts"
-  ]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@covia-ai/covialib",
+  "name": "covialib",
   "version": "1.0.0",
   "description": "TypeScript client library for Covia grid API",
   "main": "./dist/index.js",
