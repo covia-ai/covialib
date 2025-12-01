@@ -1,28 +1,62 @@
 {
-  "name": "covialib",
+  "name": "@covia-ai/covialib",
   "version": "1.0.0",
-  "description": "This directory contains the TypeScript implementation of the Covia grid API, extracted from the original JavaScript implementation.",
-  "main": "jest.config.js",
-  "scripts": {
-    "test": "jest"
+  "description": "TypeScript client library for Covia grid API",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "keywords": [
+    "covia",
+    "grid",
+    "api",
+    "typescript",
+    "assets",
+    "operations"
+  ],
+  "author": "Covia AI",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/covia-ai/covialib.git"
+    "url": "https://github.com/covia-ai/covialib.git"
   },
-  "author": "",
-  "license": "ISC",
   "bugs": {
     "url": "https://github.com/covia-ai/covialib/issues"
   },
   "homepage": "https://github.com/covia-ai/covialib#readme",
-  "dependencies": {
-    "did-resolver": "^4.1.0",
-    "jest": "^30.1.3",
-    "ts-jest": "^29.4.4",
-    "web-did-resolver": "^2.0.30"
-  },
   "devDependencies": {
-    "@types/jest": "^30.0.0"
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
