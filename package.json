@@ -47,14 +47,14 @@
   },
   "homepage": "https://github.com/covia-ai/covialib#readme",
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "prettier": "^3.0.0",
-    "tsup": "^8.5.1",
-    "typescript": "^5.3.0",
-    "vitest": "^1.0.0"
+    "@types/node": "^22.10.0",         
+    "@typescript-eslint/eslint-plugin": "^8.17.0", 
+    "@typescript-eslint/parser": "^8.17.0",        
+    "eslint": "^9.15.0",                
+    "prettier": "^3.4.2",               
+    "tsup": "^8.3.5",                    
+    "typescript": "^5.7.2",             
+    "vitest": "^2.1.8"    
   },
   "engines": {
     "node": ">=18.0.0"
