@@ -3877,5 +3877,3 @@ var Grid = class {
 };
 
 export { Asset, CoviaError, DataAsset, Grid, Job, Operation, RunStatus, Venue, fetchStreamWithError, fetchWithError };
-//# sourceMappingURL=index.mjs.map
-//# sourceMappingURL=index.mjs.map

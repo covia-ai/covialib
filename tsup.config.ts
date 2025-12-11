@@ -5,10 +5,11 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   dts: true,
   splitting: false,
-  sourcemap: true,
+  sourcemap: false, 
   clean: true,
   treeshake: true,
   minify: false,
   target: 'es2020',
   outDir: 'dist',
 });
+
