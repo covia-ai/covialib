@@ -1,62 +1,44 @@
 {
-  "name": "covialib",
+  "name": "@covia-ai/covialib",
   "version": "1.0.0",
-  "description": "TypeScript client library for Covia grid API",
+  "description": "Typescript library for covia-ai",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs"
+      
     }
   },
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run build",
-    "format": "prettier --write \"src/**/*.ts\""
+    "test": "jest",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "covia",
-    "grid",
-    "api",
     "typescript",
-    "assets",
-    "operations"
+    "library"
   ],
-  "author": "Covia AI",
+  "author": "Your Name",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/covia-ai/covialib.git"
   },
-  "bugs": {
-    "url": "https://github.com/covia-ai/covialib/issues"
-  },
-  "homepage": "https://github.com/covia-ai/covialib#readme",
   "devDependencies": {
-    "@types/node": "^22.10.0",         
-    "@typescript-eslint/eslint-plugin": "^8.17.0", 
-    "@typescript-eslint/parser": "^8.17.0",        
-    "eslint": "^9.15.0",                
-    "prettier": "^3.4.2",               
-    "tsup": "^8.3.5",                    
-    "typescript": "^5.7.2",             
-    "vitest": "^2.1.8"    
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18"
   }
 }
