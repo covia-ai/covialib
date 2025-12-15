@@ -10,7 +10,6 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.mjs"
-      
     }
   },
   "files": [
@@ -40,5 +39,9 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "did-resolver": "^4.1.0",
+    "web-did-resolver": "^2.0.32"
   }
 }
