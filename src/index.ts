@@ -8,4 +8,5 @@ export { Asset } from './Asset';
 export { Operation } from './Operation';
 export { DataAsset } from './DataAsset';
 export { Job } from './Job';
-export { fetchWithError, fetchStreamWithError } from './Utils'; 
+export { Credentials, CredentialsHTTP} from './Credentials'
+export * from './Utils'; 

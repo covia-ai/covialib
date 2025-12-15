@@ -127,6 +127,39 @@ function fetchStreamWithError(url, options) {
     throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
   });
 }
+function isJobComplete(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  return jobStatus == "COMPLETE" /* COMPLETE */ ? true : false;
+}
+function isJobPaused(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  return jobStatus == "PAUSED" /* PAUSED */ ? true : false;
+}
+function isJobFinished(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  if (jobStatus == "COMPLETE" /* COMPLETE */) return true;
+  if (jobStatus == "FAILED" /* FAILED */) return true;
+  if (jobStatus == "REJECTED" /* REJECTED */) return true;
+  if (jobStatus == "CANCELLED" /* CANCELLED */) return true;
+  return false;
+}
+function getParsedAssetId(assetId) {
+  if (assetId.startsWith("did:web")) {
+    const parts = assetId.split("/");
+    return parts[parts.length - 1];
+  }
+  return assetId;
+}
+function getAssetIdFromPath(assetHex, assetPath) {
+  const venueDid = decodeURIComponent(assetPath.split("/")[4]);
+  return venueDid + "/a/" + assetHex;
+}
+function getAssetIdFromVenueId(assetHex, venueId) {
+  return venueId + "/a/" + assetHex;
+}
 
 // src/Credentials.ts
 var CredentialsHTTP = class {
@@ -428,6 +461,7 @@ var Grid = class {
 
 exports.Asset = Asset;
 exports.CoviaError = CoviaError;
+exports.CredentialsHTTP = CredentialsHTTP;
 exports.DataAsset = DataAsset;
 exports.Grid = Grid;
 exports.Job = Job;
@@ -436,3 +470,9 @@ exports.RunStatus = RunStatus;
 exports.Venue = Venue;
 exports.fetchStreamWithError = fetchStreamWithError;
 exports.fetchWithError = fetchWithError;
+exports.getAssetIdFromPath = getAssetIdFromPath;
+exports.getAssetIdFromVenueId = getAssetIdFromVenueId;
+exports.getParsedAssetId = getParsedAssetId;
+exports.isJobComplete = isJobComplete;
+exports.isJobFinished = isJobFinished;
+exports.isJobPaused = isJobPaused;

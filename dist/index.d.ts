@@ -297,5 +297,37 @@ declare function fetchWithError<T>(url: string, options?: RequestInit): Promise<
  * @returns {Promise<Response>} The fetch response
  */
 declare function fetchStreamWithError(url: string, options?: RequestInit): Promise<Response>;
+/**
+ * Utility function to check if job is considered completed
+ * @param jobStatus - The status of the job
+ * @returns {boolean} - Returns false if job is not completed , else returns true
+ */
+declare function isJobComplete(jobStatus: RunStatus): boolean;
+/**
+ * Utility function to check if job is considered paused
+ * @param jobStatus - The status of the job
+ * @returns {boolean} - Returns false if job is not paused , else returns true
+ */
+declare function isJobPaused(jobStatus: RunStatus): boolean;
+/**
+ * Utility function to check if job is considered finished
+ * @param jobStatus - The status of the job
+ * @returns {boolean} - Returns false if job is not finished , else returns true
+ */
+declare function isJobFinished(jobStatus: RunStatus): boolean;
+/**
+ * Utility function to parse the asset hex from the compelte assetId
+ * @param assetId - The complete assetId
+ * @returns {string} - Returns the parsed hexIdof the asset
+ */
+declare function getParsedAssetId(assetId: string): string;
+/**
+ * Utility function to return complete assetId from hex and path
+ * @param assetHex - The asset hex
+ * @param assetPath - The asset path
+ * @returns {string} - Returns the complete assetId
+ */
+declare function getAssetIdFromPath(assetHex: string, assetPath: string): string;
+declare function getAssetIdFromVenueId(assetHex: string, venueId: string): string;
 
-export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError };
+export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, type Credentials, CredentialsHTTP, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };
