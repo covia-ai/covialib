@@ -24,6 +24,70 @@ var CoviaError = class extends Error {
   }
 };
 
+// src/Credentials.ts
+var CredentialsHTTP = class {
+  constructor(venueId, apiKey, userId) {
+    this.venueId = venueId;
+    this.apiKey = apiKey;
+    this.userId = userId;
+  }
+};
+
+// src/Utils.ts
+function fetchWithError(url, options) {
+  return fetch(url, options).then((response) => {
+    if (!response.ok) {
+      throw new CoviaError(`Request failed! status: ${response.status}`);
+    }
+    return response.json();
+  }).catch((error) => {
+    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
+  });
+}
+function fetchStreamWithError(url, options) {
+  return fetch(url, options).then((response) => {
+    if (!response.ok) {
+      throw new CoviaError(`Request failed! status: ${response.status}`);
+    }
+    return response;
+  }).catch((error) => {
+    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
+  });
+}
+function isJobComplete(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  return jobStatus == "COMPLETE" /* COMPLETE */ ? true : false;
+}
+function isJobPaused(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  return jobStatus == "PAUSED" /* PAUSED */ ? true : false;
+}
+function isJobFinished(jobStatus) {
+  if (jobStatus == null)
+    return false;
+  if (jobStatus == "COMPLETE" /* COMPLETE */) return true;
+  if (jobStatus == "FAILED" /* FAILED */) return true;
+  if (jobStatus == "REJECTED" /* REJECTED */) return true;
+  if (jobStatus == "CANCELLED" /* CANCELLED */) return true;
+  return false;
+}
+function getParsedAssetId(assetId) {
+  if (assetId.startsWith("did:web")) {
+    const parts = assetId.split("/");
+    return parts[parts.length - 1];
+  }
+  return assetId;
+}
+function getAssetIdFromPath(assetHex, assetPath) {
+  const venueDid = decodeURIComponent(assetPath.split("/")[4]);
+  return venueDid + "/a/" + assetHex;
+}
+function getAssetIdFromVenueId(assetHex, venueId) {
+  return venueId + "/a/" + assetHex;
+}
+
 // src/Asset.ts
 var cache = /* @__PURE__ */ new Map();
 var Asset = class {
@@ -102,70 +166,6 @@ var DataAsset = class extends Asset {
   }
   // DataAsset-specific methods can be added here
   // For now, it inherits all functionality from Asset
-};
-
-// src/Utils.ts
-function fetchWithError(url, options) {
-  return fetch(url, options).then((response) => {
-    if (!response.ok) {
-      throw new CoviaError(`Request failed! status: ${response.status}`);
-    }
-    return response.json();
-  }).catch((error) => {
-    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
-  });
-}
-function fetchStreamWithError(url, options) {
-  return fetch(url, options).then((response) => {
-    if (!response.ok) {
-      throw new CoviaError(`Request failed! status: ${response.status}`);
-    }
-    return response;
-  }).catch((error) => {
-    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
-  });
-}
-function isJobComplete(jobStatus) {
-  if (jobStatus == null)
-    return false;
-  return jobStatus == "COMPLETE" /* COMPLETE */ ? true : false;
-}
-function isJobPaused(jobStatus) {
-  if (jobStatus == null)
-    return false;
-  return jobStatus == "PAUSED" /* PAUSED */ ? true : false;
-}
-function isJobFinished(jobStatus) {
-  if (jobStatus == null)
-    return false;
-  if (jobStatus == "COMPLETE" /* COMPLETE */) return true;
-  if (jobStatus == "FAILED" /* FAILED */) return true;
-  if (jobStatus == "REJECTED" /* REJECTED */) return true;
-  if (jobStatus == "CANCELLED" /* CANCELLED */) return true;
-  return false;
-}
-function getParsedAssetId(assetId) {
-  if (assetId.startsWith("did:web")) {
-    const parts = assetId.split("/");
-    return parts[parts.length - 1];
-  }
-  return assetId;
-}
-function getAssetIdFromPath(assetHex, assetPath) {
-  const venueDid = decodeURIComponent(assetPath.split("/")[4]);
-  return venueDid + "/a/" + assetHex;
-}
-function getAssetIdFromVenueId(assetHex, venueId) {
-  return venueId + "/a/" + assetHex;
-}
-
-// src/Credentials.ts
-var CredentialsHTTP = class {
-  constructor(venueId, apiKey, userId) {
-    this.venueId = venueId;
-    this.apiKey = apiKey;
-    this.userId = userId;
-  }
 };
 
 // src/Job.ts

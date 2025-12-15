@@ -266,23 +266,6 @@ declare class CoviaError extends Error {
     constructor(message: string, code?: number | null);
 }
 
-declare class Grid {
-    /**
-    * Static method to connect to a venue
-    * @param venueId - Can be a HTTP base URL, DNS name, or existing Venue instance
-    * @returns {Promise<Venue>} A new Venue instance configured appropriately
-    */
-    static connect(venueId: string, credentials?: CredentialsHTTP): Promise<Venue>;
-}
-
-declare class Operation extends Asset {
-    constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
-}
-
-declare class DataAsset extends Asset {
-    constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
-}
-
 /**
  * Utility function to handle API calls with consistent error handling
  * @param url - The URL to fetch
@@ -329,5 +312,22 @@ declare function getParsedAssetId(assetId: string): string;
  */
 declare function getAssetIdFromPath(assetHex: string, assetPath: string): string;
 declare function getAssetIdFromVenueId(assetHex: string, venueId: string): string;
+
+declare class Grid {
+    /**
+    * Static method to connect to a venue
+    * @param venueId - Can be a HTTP base URL, DNS name, or existing Venue instance
+    * @returns {Promise<Venue>} A new Venue instance configured appropriately
+    */
+    static connect(venueId: string, credentials?: CredentialsHTTP): Promise<Venue>;
+}
+
+declare class Operation extends Asset {
+    constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
+}
+
+declare class DataAsset extends Asset {
+    constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
+}
 
 export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, type Credentials, CredentialsHTTP, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };
