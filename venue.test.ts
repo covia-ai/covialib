@@ -1,44 +1,66 @@
-import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus, StatusData, Job, Grid } from './src/index';
+import { Venue,  CoviaError,  StatusData, Job, Grid, RunStatus, isJobComplete, isJobFinished, getParsedAssetId, getAssetIdFromPath, getAssetIdFromVenueId } from './src/index';
 
 let venue:Venue;
 
 beforeAll(async () => {
-      venue = await Grid.connect('did:web:venue-test.covia.ai'); // Replace with your async function
-    });
+     const venueDid = process.env.VENUE_HOST?.toString();
+      if(venueDid)
+          venue = await Grid.connect(venueDid);
+      else
+          throw new Error("Unable to connect to Venue "+venueDid)
+});
 
+test('GridConnectWithDid', () => { 
+  Grid.connect(process.env.VENUE_HOST!).then((venue:Venue) => {
+    expect(venue.venueId).toBe(process.env.VENUE_HOST!);
+
+  })
+});
 test('GridConnectWithUrl', () => { 
-  Grid.connect('https://venue-test.covia.ai/').then((venue:Venue) => {
-    expect(venue.venueId).toBe('did:web:venue-test.covia.ai');
+  Grid.connect(process.env.VENUE_URL!).then((venue:Venue) => {
+    expect(venue.venueId).toBe(process.env.VENUE_HOST!);
 
   })
 });
 test('GridConnectWithInvalidDid', () => { 
-  Grid.connect('did:web:venue-zzyaaa.covia.ai').then((response) => {
+  Grid.connect(process.env.INVALID_DID!).then((response) => {
     expect(response).toBe('Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.');
     
   })
 });
+test('GridConnectCheckName', () => { 
+  Grid.connect(process.env.VENUE_HOST!).then((venue:Venue) => {
+    expect(venue.name).toBe(process.env.VENUE_NAME!);
 
+  })
+});
 test('venueHasAssets', () => { 
     venue.getAssets().then((assets) => {
       expect(assets).toBeInstanceOf(Array);
-      expect(assets.length).toBeGreaterThan(5);
+      expect(assets.length).toBeGreaterThan(Number(process.env.MIN_ASSETS_VENUE));
     })
 });
 
 test('venueHasAssetId', () => {
-   expect(venue.getAsset('0e39af73ed1710a1f555a10f0f066ad1155be26c0ec0a8160d88ac529ebf6056')).resolves.not.toBeNull();
+   expect(venue.getAsset(process.env.VALID_ASSET!)).resolves.not.toBeNull();
+   venue.getAsset(process.env.VALID_ASSET!).then((asset) => {
+       
+      asset.getMetadata().then(metadata => {
+        console.log(metadata)
+      })
+   })
 });
 
+
 test('venueInvokeOp', () => {
-   expect(venue.getAsset('1821e02f84f24623cd8c05456230b457f475d7836147b9a88511577b3371bdac')).resolves.not.toBeNull();
-    venue.getAsset('1821e02f84f24623cd8c05456230b457f475d7836147b9a88511577b3371bdac').then((operation) => {
+   expect(venue.getAsset(process.env.VALID_OP!)).resolves.not.toBeNull();
+    venue.getAsset(process.env.VALID_OP!).then((operation) => {
       expect(operation.id).not.toBeNull();
-       operation.run({ length: "10" }).then((result) => {
-        expect(result.status).toBe("COMPLETE")
+       operation.run(process.env.OP_INPUT).then((result) => {
+        expect(result.status).toBe(RunStatus.COMPLETE)
         const jobId = result.id;
         venue.getJob(jobId).then((job:Job) => {
-           expect(job?.metadata.input).toEqual({ length: "10" })
+           expect(job?.metadata.input).toEqual(process.env.OP_INPUT)
         })
     })
     })
@@ -73,6 +95,7 @@ test('venuDataAsset', () => {
                  })
                         
             })
+           expect(asset.getContentURL()).toBe(process.env.VENUE_URL+"/api/v1/assets/"+asset.id+"/content");
          }) 
    })
 })
@@ -86,10 +109,10 @@ test('venueHasNoData', () => {
 });
 
 test('venueInvokeOpAndCancel', () => {
-   expect(venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630')).resolves.not.toBeNull();
-    venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630').then((operation) => {
+   expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
+    venue.getAsset(process.env.VALID_OP2!).then((operation) => {
       expect(operation.id).not.toBeNull();
-       operation.run({ length: "10" }).then((result) => {
+       operation.run(process.env.VALID_OP2_INPUT!).then((result) => {
        if(result.status == 'STARTED' || result.status == 'PENDING') {
         const jobId = result.id;
         venue.cancelJob(jobId).then((status) => {
@@ -102,11 +125,11 @@ test('venueInvokeOpAndCancel', () => {
 });
 
 test('venueInvokeOpAndDelete', () => {
-   expect(venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630')).resolves.not.toBeNull();
-    venue.getAsset('57def38c9005783f3431191c6d8e7a2b8a3fcf1791ff783d8e4033acc91d0630').then((operation) => {
+   expect(venue.getAsset(process.env.VALID_OP2_INPUT!)).resolves.not.toBeNull();
+    venue.getAsset(process.env.VALID_OP2_INPUT!).then((operation) => {
       expect(operation.id).not.toBeNull();
        operation.run({ length: "10" }).then((result) => {
-       if(result.status == 'STARTED' || result.status == 'PENDING') {
+       if(result.status == RunStatus.STARTED || result.status == RunStatus.PENDING) {
         const jobId = result.id;
         venue.deleteJob(jobId).then((status) => {
              expect(status).toBe(200)
@@ -120,13 +143,34 @@ test('venueInvokeOpAndDelete', () => {
 test('venueStatus', () => {
    venue.getStats().then((stats:StatusData) => {
       expect(stats?.status).toBe("OK");
-      expect(stats?.url).toBe("https://venue-test.covia.ai");
-      expect(stats?.did).toBe("did:web:venue-test.covia.ai");
+      expect(stats?.url).toBe(process.env.VENUE_URL);
+      expect(stats?.did).toBe(process.env.VENUE_HOST);
    })
 })
+//Util methods 
+test('isJobCompleteMethod', () => {
+   expect(isJobComplete(RunStatus.COMPLETE)).toBe(true)
+    expect(isJobComplete(RunStatus.PENDING)).toBe(false)
+})
+test('isJobFinsihedMethod', () => {
+   expect(isJobFinished(RunStatus.COMPLETE)).toBe(true)
+   expect(isJobFinished(RunStatus.FAILED)).toBe(true)
+   expect(isJobFinished(RunStatus.REJECTED)).toBe(true)
+   expect(isJobFinished(RunStatus.CANCELLED)).toBe(true)
+   expect(isJobFinished(RunStatus.STARTED)).toBe(false)
+   expect(isJobFinished(RunStatus.AUTH_REQUIRED)).toBe(false)
+})
+test('pareHexFromAssetIf', () => {
+  expect(getParsedAssetId(process.env.VALID_ASSET_ID!)).toBe(process.env.VALID_ASSET!)
+  expect(getParsedAssetId(process.env.VALID_OP2_ID!)).toBe(process.env.VALID_OP2!)
+})
+test('getAssetIdFromPath', () => {
+  expect(getAssetIdFromPath(process.env.VALID_OP2!, process.env.VENUE_URL!+"/venues/"+process.env.VENUE_HOST!+"/operations/"+process.env.VALID_OP2!)).toBe(process.env.VALID_OP2_ID)
+})
 
-const getSHA256Hash = async (input) => {
-      const textAsBuffer = new TextEncoder().encode(input);
+
+const getSHA256Hash = async (input:Buffer<ArrayBuffer>) => {
+      const textAsBuffer = new TextEncoder().encode(input.toString());
       const hashBuffer = await crypto.subtle.digest("SHA-256", textAsBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hash = hashArray
@@ -134,4 +178,5 @@ const getSHA256Hash = async (input) => {
         .join("");
       return hash;
 };
+
 

@@ -73,7 +73,7 @@ export function isJobFinished(jobStatus:RunStatus): boolean {
   if (jobStatus == RunStatus.COMPLETE) return true;
   if (jobStatus == RunStatus.FAILED) return true;
   if (jobStatus == RunStatus.REJECTED) return true;
-  if (jobStatus== RunStatus.CANCELLED) return true;
+  if (jobStatus == RunStatus.CANCELLED) return true;
 
   return false;
 }

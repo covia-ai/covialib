@@ -31,8 +31,6 @@ export class Venue implements VenueInterface {
     this.metadata = {};
   }
  
-  
-
   /**
    * Static method to connect to a venue
    * @param venueId - Can be a HTTP base URL, DNS name, or existing Venue instance
