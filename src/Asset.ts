@@ -1,3 +1,4 @@
+import { Job } from './Job';
 import {  AssetMetadata, RunStatus, VenueInterface, AssetID } from './types';
 
 // Cache for storing asset data
@@ -73,6 +74,16 @@ export abstract class Asset {
   run(input: any): Promise<any> {
 
     return this.venue.run( this.id, input);
+  }
+
+   /**
+   * Execute the operation
+   * @param input - Operation input parameters
+   * @returns {Promise<any>}
+   */
+  invoke(input: any): Promise<Job> {
+
+    return this.venue.invoke( this.id, input);
   }
 }
 

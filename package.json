@@ -19,7 +19,7 @@
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src --ext .ts",
-    "test": "jest",
+    "test": "jest --coverage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

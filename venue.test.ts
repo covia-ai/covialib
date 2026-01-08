@@ -9,7 +9,6 @@ beforeAll(async () => {
       else
           throw new Error("Unable to connect to Venue "+venueDid)
 });
-
 test('GridConnectWithDid', () => { 
   Grid.connect(process.env.VENUE_HOST!).then((venue:Venue) => {
     expect(venue.venueId).toBe(process.env.VENUE_HOST!);
@@ -40,7 +39,6 @@ test('venueHasAssets', () => {
       expect(assets.length).toBeGreaterThan(Number(process.env.MIN_ASSETS_VENUE));
     })
 });
-
 test('venueHasAssetId', () => {
    expect(venue.getAsset(process.env.VALID_ASSET!)).resolves.not.toBeNull();
    venue.getAsset(process.env.VALID_ASSET!).then((asset) => {
@@ -50,8 +48,6 @@ test('venueHasAssetId', () => {
       })
    })
 });
-
-
 test('venueInvokeOp', () => {
    expect(venue.getAsset(process.env.VALID_OP!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP!).then((operation) => {
@@ -65,7 +61,6 @@ test('venueInvokeOp', () => {
     })
     })
 });
-
 test('venuDataAsset', () => {
    const contentData = 'Hello World', contentType = 'text/plain';
    getSHA256Hash(Buffer.from(contentData)).then((hash) => {
@@ -99,16 +94,13 @@ test('venuDataAsset', () => {
          }) 
    })
 })
-
 test('venueDoesNotHaveAssetId', () => {
    expect(venue.getAsset('42322')).rejects.toEqual(new CoviaError('Request failed! status: 400'));
 });
-
 test('venueHasNoData', () => {
    expect(venue.getJob('xyz')).rejects.toEqual(new CoviaError('Request failed! status: 404'));
 });
-
-test('venueInvokeOpAndCancel', () => {
+test('venueRunOpAndCancel', () => {
    expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP2!).then((operation) => {
       expect(operation.id).not.toBeNull();
@@ -123,7 +115,21 @@ test('venueInvokeOpAndCancel', () => {
       });
     })
 });
-
+test('venueInvokeOpAndCancel', () => {
+   expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
+    venue.getAsset(process.env.VALID_OP2!).then((operation) => {
+      expect(operation.id).not.toBeNull();
+       operation.invoke(process.env.VALID_OP2_INPUT!).then((result) => {
+       if(result.metadata.status == 'STARTED' || result.metadata.status == 'PENDING') {
+        const jobId = result.id;
+        venue.cancelJob(jobId).then((status) => {
+             expect(status).toBe(200)
+        })
+       
+       }
+      });
+    })
+});
 test('venueInvokeOpAndDelete', () => {
    expect(venue.getAsset(process.env.VALID_OP2_INPUT!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP2_INPUT!).then((operation) => {
@@ -139,7 +145,6 @@ test('venueInvokeOpAndDelete', () => {
       });
     })
 });
-
 test('venueStatus', () => {
    venue.getStats().then((stats:StatusData) => {
       expect(stats?.status).toBe("OK");
@@ -147,10 +152,9 @@ test('venueStatus', () => {
       expect(stats?.did).toBe(process.env.VENUE_HOST);
    })
 })
-//Util methods 
 test('isJobCompleteMethod', () => {
    expect(isJobComplete(RunStatus.COMPLETE)).toBe(true)
-    expect(isJobComplete(RunStatus.PENDING)).toBe(false)
+   expect(isJobComplete(RunStatus.PENDING)).toBe(false)
 })
 test('isJobFinsihedMethod', () => {
    expect(isJobFinished(RunStatus.COMPLETE)).toBe(true)
@@ -167,8 +171,19 @@ test('pareHexFromAssetIf', () => {
 test('getAssetIdFromPath', () => {
   expect(getAssetIdFromPath(process.env.VALID_OP2!, process.env.VENUE_URL!+"/venues/"+process.env.VENUE_HOST!+"/operations/"+process.env.VALID_OP2!)).toBe(process.env.VALID_OP2_ID)
 })
+test('getAssetIdFromVenueId', () => {
+  expect(getAssetIdFromVenueId(process.env.VALID_OP2!,process.env.VENUE_HOST!)).toBe(process.env.VALID_OP2_ID)
+})
+test('getJobs', () => {
+venue.getJobs().then((jobs => {
+      expect(jobs.length).toBeGreaterThan(0);
+      venue.getJob(jobs[0]).then((job:Job) => {
+         expect(job.id).not.toBeNull();
+         expect(job.metadata.status).not.toBeNull();
+      })
 
-
+  }))
+})
 const getSHA256Hash = async (input:Buffer<ArrayBuffer>) => {
       const textAsBuffer = new TextEncoder().encode(input.toString());
       const hashBuffer = await crypto.subtle.digest("SHA-256", textAsBuffer);
