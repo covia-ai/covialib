@@ -1,3 +1,20 @@
+declare class Job {
+    id: string;
+    venue: VenueInterface;
+    metadata: JobMetadata;
+    constructor(id: string, venue: VenueInterface, metadata: JobMetadata);
+    /**
+    * Cancels the execution of the job
+    * @returns {Promise<number>}
+    */
+    cancelJob(): Promise<number>;
+    /**
+     * Delete the job
+     * @returns {Promise<number>}
+     */
+    deleteJob(): Promise<number>;
+}
+
 declare abstract class Asset {
     id: AssetID;
     venue: VenueInterface;
@@ -37,6 +54,12 @@ declare abstract class Asset {
      * @returns {Promise<any>}
      */
     run(input: any): Promise<any>;
+    /**
+    * Execute the operation
+    * @param input - Operation input parameters
+    * @returns {Promise<any>}
+    */
+    invoke(input: any): Promise<Job>;
 }
 
 interface Credentials {
@@ -51,29 +74,11 @@ declare class CredentialsHTTP implements Credentials {
     constructor(venueId: string, apiKey: string, userId: string);
 }
 
-declare class Job {
-    id: string;
-    venue: VenueInterface;
-    metadata: JobMetadata;
-    constructor(id: string, venue: VenueInterface, metadata: JobMetadata);
-    /**
-    * Cancels the execution of the job
-    * @returns {Promise<number>}
-    */
-    cancelJob(): Promise<number>;
-    /**
-     * Delete the job
-     * @returns {Promise<number>}
-     */
-    deleteJob(): Promise<number>;
-}
-
 declare class Venue implements VenueInterface {
     baseUrl: string;
     venueId: string;
-    name: string;
     credentials: Credentials;
-    metadata: AssetMetadata;
+    metadata: VenueData;
     constructor(options?: VenueOptions);
     /**
      * Static method to connect to a venue
@@ -167,6 +172,7 @@ interface VenueOptions {
     baseUrl?: string;
     venueId?: string;
     name?: string;
+    description?: string;
     credentials?: Credentials;
 }
 interface VenueConstructor {
@@ -176,8 +182,7 @@ interface VenueConstructor {
 interface VenueInterface {
     baseUrl: string;
     venueId: string;
-    name: string;
-    metadata: AssetMetadata;
+    metadata: VenueData;
     cancelJob(jobId: string): Promise<number>;
     deleteJob(jobId: string): Promise<number>;
     getStats(): Promise<StatusData>;
@@ -205,6 +210,10 @@ interface AssetMetadata {
     content?: ContentDetails;
     input?: any;
     output?: any;
+}
+interface VenueData {
+    description?: string;
+    name?: string;
 }
 /** Type for metadata.operation */
 interface OperationDetails {
@@ -330,4 +339,4 @@ declare class DataAsset extends Asset {
     constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
 }
 
-export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, type Credentials, CredentialsHTTP, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };
+export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, type Credentials, CredentialsHTTP, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueData, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };

@@ -1,4 +1,4 @@
-import { CoviaError, VenueOptions, AssetMetadata, VenueInterface, AssetID, StatusData } from './types';
+import { CoviaError, VenueOptions, VenueData, AssetMetadata, VenueInterface, AssetID, StatusData } from './types';
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
@@ -17,18 +17,19 @@ const cache = new Map<AssetID, any>();
 export class Venue implements VenueInterface {
   public baseUrl: string;
   public venueId: string;
-  public name: string;  
   public credentials: Credentials;
-  public metadata: AssetMetadata;
+  public metadata: VenueData;
   
   constructor(options: VenueOptions = {}) {
     
     
     this.baseUrl = options.baseUrl || 'https://venue-test.covia.ai';
-    this.venueId = options.venueId || "default";
-    this.name = options.name || "default";
+    this.venueId = options.venueId || "did:web:venue-test.covia.ai";
     this.credentials  = options.credentials || new CredentialsHTTP(this.venueId,"","");
-    this.metadata = {};
+    this.metadata = {
+        name: options.name || "default",
+        description: options.description || ""
+    };
   }
  
   /**
@@ -44,7 +45,7 @@ export class Venue implements VenueInterface {
       return new Venue({
         baseUrl: venueId.baseUrl,
         venueId: venueId.venueId,
-        name: venueId.name,
+        name: venueId.metadata.name,
         credentials: credentials
       });
     }
@@ -253,25 +254,13 @@ export class Venue implements VenueInterface {
         input: input
       };
   
-      let customHeader = {};
-  
-      if(this.credentials.userId && this.credentials.userId != "") {
-          customHeader = {
-            'Content-Type': 'application/json',
-            'X-Covia-User' : this.credentials.userId,
-          }
-      }
-      else {
-           customHeader = {
-            'Content-Type': 'application/json'
-          }
-      }
       try {
-        return  await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
+        const response =   await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
           method: 'POST',
-          headers: customHeader,
+          headers: this.setCredentialsInHeader(),
           body: JSON.stringify(payload),
         });
+        return response?.output;
       } catch (error) {
         throw error;
       }

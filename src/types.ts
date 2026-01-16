@@ -7,6 +7,7 @@ export interface VenueOptions {
   baseUrl?: string;
   venueId?: string;
   name?:string;
+  description?:string;
   credentials?:Credentials;
 }
 
@@ -19,8 +20,7 @@ export interface VenueConstructor {
 export interface VenueInterface {
   baseUrl: string;
   venueId: string;
-  name: string;
-  metadata: AssetMetadata;
+  metadata: VenueData;
   
   cancelJob(jobId:string):Promise<number>;
   deleteJob(jobId:string):Promise<number>;
@@ -54,6 +54,11 @@ export interface AssetMetadata {
   output?: any;
 }
 
+export interface VenueData {
+  description?: string;
+  name?:string;
+
+}
 /** Type for metadata.operation */
 export interface OperationDetails {
   [key: string]: any;

@@ -148,6 +148,14 @@ var Asset = class {
   run(input) {
     return this.venue.run(this.id, input);
   }
+  /**
+  * Execute the operation
+  * @param input - Operation input parameters
+  * @returns {Promise<any>}
+  */
+  invoke(input) {
+    return this.venue.invoke(this.id, input);
+  }
 };
 
 // src/Operation.ts
@@ -198,10 +206,12 @@ var cache2 = /* @__PURE__ */ new Map();
 var Venue = class _Venue {
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || "https://venue-test.covia.ai";
-    this.venueId = options.venueId || "default";
-    this.name = options.name || "default";
+    this.venueId = options.venueId || "did:web:venue-test.covia.ai";
     this.credentials = options.credentials || new CredentialsHTTP(this.venueId, "", "");
-    this.metadata = {};
+    this.metadata = {
+      name: options.name || "default",
+      description: options.description || ""
+    };
   }
   /**
    * Static method to connect to a venue
@@ -214,7 +224,7 @@ var Venue = class _Venue {
       return new _Venue({
         baseUrl: venueId.baseUrl,
         venueId: venueId.venueId,
-        name: venueId.name,
+        name: venueId.metadata.name,
         credentials
       });
     }
@@ -389,23 +399,13 @@ var Venue = class _Venue {
       operation: assetId,
       input
     };
-    let customHeader = {};
-    if (this.credentials.userId && this.credentials.userId != "") {
-      customHeader = {
-        "Content-Type": "application/json",
-        "X-Covia-User": this.credentials.userId
-      };
-    } else {
-      customHeader = {
-        "Content-Type": "application/json"
-      };
-    }
     try {
-      return await fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
+      const response = await fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
         method: "POST",
-        headers: customHeader,
+        headers: this.setCredentialsInHeader(),
         body: JSON.stringify(payload)
       });
+      return response?.output;
     } catch (error) {
       throw error;
     }
