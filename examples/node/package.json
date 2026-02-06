@@ -1,0 +1,21 @@
+{
+  "name": "covialib-example",
+  "version": "1.0.0",
+  "description": "Simple examples for using the covialib TypeScript API",
+  "main": "covialib-js-example",
+  "scripts": {
+    "start": "node covialib-js-example"
+  },
+  "keywords": [
+    "covia",
+    "covialib"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@covia-ai/covialib": "github:covia-ai/covialib"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

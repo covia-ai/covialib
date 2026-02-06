@@ -29,7 +29,7 @@ test('GridConnectWithInvalidDid', () => {
 });
 test('GridConnectCheckName', () => { 
   Grid.connect(process.env.VENUE_HOST!).then((venue:Venue) => {
-    expect(venue.name).toBe(process.env.VENUE_NAME!);
+    expect(venue.metadata.name).toBe(process.env.VENUE_NAME!);
 
   })
 });
@@ -100,6 +100,7 @@ test('venueDoesNotHaveAssetId', () => {
 test('venueHasNoData', () => {
    expect(venue.getJob('xyz')).rejects.toEqual(new CoviaError('Request failed! status: 404'));
 });
+
 test('venueRunOpAndCancel', () => {
    expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP2!).then((operation) => {
@@ -184,6 +185,12 @@ venue.getJobs().then((jobs => {
 
   }))
 })
+
+test('InvalidContentExpectedError', async () => {
+  await expect(
+    venue.getContent('7a56edfc4347e7c7439dc6a943b3a06e240c9fcb6b0f51487c1d5b696dd7d9b6')
+  ).rejects.toThrow(CoviaError);
+});
 const getSHA256Hash = async (input:Buffer<ArrayBuffer>) => {
       const textAsBuffer = new TextEncoder().encode(input.toString());
       const hashBuffer = await crypto.subtle.digest("SHA-256", textAsBuffer);
