@@ -225,7 +225,7 @@ export class Venue implements VenueInterface {
    * @param content - Content to upload
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
-  async uploadContent(content: BodyInit, assetId:string): Promise<ReadableStream<Uint8Array> | null> {
+  async uploadContent(assetId:string, content: BodyInit ): Promise<ReadableStream<Uint8Array> | null> {
     const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
       method: 'PUT',
       headers: this.setCredentialsInHeader(),

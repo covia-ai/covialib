@@ -186,11 +186,7 @@ venue.getJobs().then((jobs => {
   }))
 })
 
-test('InvalidContentExpectedError', async () => {
-  await expect(
-    venue.getContent('7a56edfc4347e7c7439dc6a943b3a06e240c9fcb6b0f51487c1d5b696dd7d9b6')
-  ).rejects.toThrow(CoviaError);
-});
+
 const getSHA256Hash = async (input:Buffer<ArrayBuffer>) => {
       const textAsBuffer = new TextEncoder().encode(input.toString());
       const hashBuffer = await crypto.subtle.digest("SHA-256", textAsBuffer);

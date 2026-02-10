@@ -147,7 +147,7 @@ declare class Venue implements VenueInterface {
  * @param content - Content to upload
  * @returns {Promise<ReadableStream<Uint8Array> | null>}
  */
-    uploadContent(content: BodyInit, assetId: string): Promise<ReadableStream<Uint8Array> | null>;
+    uploadContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     /**
      * Get asset content
      * @returns {Promise<ReadableStream<Uint8Array> | null>}

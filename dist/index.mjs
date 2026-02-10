@@ -373,7 +373,7 @@ var Venue = class _Venue {
   * @param content - Content to upload
   * @returns {Promise<ReadableStream<Uint8Array> | null>}
   */
-  async uploadContent(content, assetId) {
+  async uploadContent(assetId, content) {
     const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
       method: "PUT",
       headers: this.setCredentialsInHeader(),
