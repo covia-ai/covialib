@@ -46,7 +46,7 @@ async function main() {
     }))
 
      //Text content asset creation
-     const contentData = 'Hello World', contentType = 'text/plain';
+     const contentData = 'Hello World from example code', contentType = 'text/plain';
      getSHA256Hash(Buffer.from(contentData)).then((hash) => {
          const metadata = 
             {
@@ -61,44 +61,15 @@ async function main() {
                   }
          }
          venue.createAsset(metadata).then((asset) => {
+            console.log(asset.id)
             const content = new Blob([contentData], { type: contentType });
-            asset.uploadContent(content).then((response)=> {        
-                 console.log(response)      
-            }).catch((error) => {
-              console.log(error)
-            })
-         }) 
-    })
-
-     const jsonContent = {"menu": {
-        "id": "file",
-        "value": "File",
-        "popup": {
-        "menuitem": [
-          {"value": "New", "onclick": "CreateNewDoc()"},
-          {"value": "Open", "onclick": "OpenDoc()"},
-          {"value": "Close", "onclick": "CloseDoc()"}
-        ]
-      }
-      }}
-
-       getSHA256Hash(Buffer.from(jsonContent)).then((hash) => {
-         const metadata = 
-            {
-            "name":"Test Metadata With json input",
-            "creator":"Test",
-            "description":"Test data to upload and check content.",
-            "dateCreated":"2025-08-12",
-            "keywords":["jsoncontent"],
-            "content": {
-                     "sha256" : hash,
-                     "contentType" : "application/json", 
-                  }
-         }
-         venue.createAsset(metadata).then((asset) => {
-            const content = new Blob([jsonContent], { type: "application/json" });
-            asset.uploadContent(content).then((response)=> {        
-                 console.log(response)      
+            asset.uploadContent(content).then((response)=> {    
+                  response?.getReader().read().then(({done,value}) => {
+                  
+                     const decoder = new TextDecoder('utf-8'); 
+                     const str = decoder.decode(value);
+                     
+                   })
             }).catch((error) => {
               console.log(error)
             })

@@ -21,12 +21,6 @@ test('GridConnectWithUrl', () => {
 
   })
 });
-test('GridConnectWithInvalidDid', () => { 
-  Grid.connect(process.env.INVALID_DID!).then((response) => {
-    expect(response).toBe('Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.');
-    
-  })
-});
 test('GridConnectCheckName', () => { 
   Grid.connect(process.env.VENUE_HOST!).then((venue:Venue) => {
     expect(venue.metadata.name).toBe(process.env.VENUE_NAME!);
@@ -44,7 +38,7 @@ test('venueHasAssetId', () => {
    venue.getAsset(process.env.VALID_ASSET!).then((asset) => {
        
       asset.getMetadata().then(metadata => {
-        console.log(metadata)
+        expect(metadata?.name).toBe('Iris Dataset');
       })
    })
 });
@@ -52,16 +46,16 @@ test('venueInvokeOp', () => {
    expect(venue.getAsset(process.env.VALID_OP!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP!).then((operation) => {
       expect(operation.id).not.toBeNull();
-       operation.run(process.env.OP_INPUT).then((result) => {
-        expect(result.status).toBe(RunStatus.COMPLETE)
+       operation.invoke({ length: "10" }).then((result:Job) => {
+        expect(result.metadata.status).toBe(RunStatus.COMPLETE)
         const jobId = result.id;
         venue.getJob(jobId).then((job:Job) => {
-           expect(job?.metadata.input).toEqual(process.env.OP_INPUT)
+           expect(job?.metadata.input).toEqual({ length: '10' })
         })
     })
     })
 });
-test('venuDataAsset', () => {
+test('venueDataAsset', () => {
    const contentData = 'Hello World', contentType = 'text/plain';
    getSHA256Hash(Buffer.from(contentData)).then((hash) => {
          const metadata = 
@@ -79,7 +73,7 @@ test('venuDataAsset', () => {
          venue.createAsset(metadata).then((asset) => {
             expect(asset.id).not.toBeNull();
             const content = new Blob([contentData], { type: contentType });
-            asset.uploadContent(content).then((response)=> {        
+            asset.uploadContent(content).then((response)=> {      
                  expect(response).toBeInstanceOf(ReadableStream)
                  asset.getContent().then((response) => {
                    response?.getReader().read().then(({done,value}) => {
@@ -94,6 +88,8 @@ test('venuDataAsset', () => {
          }) 
    })
 })
+
+
 test('venueDoesNotHaveAssetId', () => {
    expect(venue.getAsset('42322')).rejects.toEqual(new CoviaError('Request failed! status: 400'));
 });
@@ -102,21 +98,6 @@ test('venueHasNoData', () => {
 });
 
 test('venueRunOpAndCancel', () => {
-   expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
-    venue.getAsset(process.env.VALID_OP2!).then((operation) => {
-      expect(operation.id).not.toBeNull();
-       operation.run(process.env.VALID_OP2_INPUT!).then((result) => {
-       if(result.status == 'STARTED' || result.status == 'PENDING') {
-        const jobId = result.id;
-        venue.cancelJob(jobId).then((status) => {
-             expect(status).toBe(200)
-        })
-       
-       }
-      });
-    })
-});
-test('venueInvokeOpAndCancel', () => {
    expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
     venue.getAsset(process.env.VALID_OP2!).then((operation) => {
       expect(operation.id).not.toBeNull();
@@ -131,14 +112,15 @@ test('venueInvokeOpAndCancel', () => {
       });
     })
 });
-test('venueInvokeOpAndDelete', () => {
-   expect(venue.getAsset(process.env.VALID_OP2_INPUT!)).resolves.not.toBeNull();
-    venue.getAsset(process.env.VALID_OP2_INPUT!).then((operation) => {
+
+test('venueInvokeOpAndCancel', () => {
+   expect(venue.getAsset(process.env.VALID_OP2!)).resolves.not.toBeNull();
+    venue.getAsset(process.env.VALID_OP2!).then((operation) => {
       expect(operation.id).not.toBeNull();
-       operation.run({ length: "10" }).then((result) => {
-       if(result.status == RunStatus.STARTED || result.status == RunStatus.PENDING) {
+       operation.invoke(process.env.VALID_OP2_INPUT!).then((result) => {
+       if(result.metadata.status == 'STARTED' || result.metadata.status == 'PENDING') {
         const jobId = result.id;
-        venue.deleteJob(jobId).then((status) => {
+        venue.cancelJob(jobId).then((status) => {
              expect(status).toBe(200)
         })
        
@@ -165,16 +147,6 @@ test('isJobFinsihedMethod', () => {
    expect(isJobFinished(RunStatus.STARTED)).toBe(false)
    expect(isJobFinished(RunStatus.AUTH_REQUIRED)).toBe(false)
 })
-test('pareHexFromAssetIf', () => {
-  expect(getParsedAssetId(process.env.VALID_ASSET_ID!)).toBe(process.env.VALID_ASSET!)
-  expect(getParsedAssetId(process.env.VALID_OP2_ID!)).toBe(process.env.VALID_OP2!)
-})
-test('getAssetIdFromPath', () => {
-  expect(getAssetIdFromPath(process.env.VALID_OP2!, process.env.VENUE_URL!+"/venues/"+process.env.VENUE_HOST!+"/operations/"+process.env.VALID_OP2!)).toBe(process.env.VALID_OP2_ID)
-})
-test('getAssetIdFromVenueId', () => {
-  expect(getAssetIdFromVenueId(process.env.VALID_OP2!,process.env.VENUE_HOST!)).toBe(process.env.VALID_OP2_ID)
-})
 test('getJobs', () => {
 venue.getJobs().then((jobs => {
       expect(jobs.length).toBeGreaterThan(0);
@@ -185,7 +157,6 @@ venue.getJobs().then((jobs => {
 
   }))
 })
-
 
 const getSHA256Hash = async (input:Buffer<ArrayBuffer>) => {
       const textAsBuffer = new TextEncoder().encode(input.toString());

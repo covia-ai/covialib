@@ -2,7 +2,7 @@ import { CoviaError, VenueOptions, VenueData, AssetMetadata, VenueInterface, Ass
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
-import { fetchStreamWithError, fetchWithError } from './Utils';
+import { fetchStreamWithError, fetchWithError, isJobComplete } from './Utils';
 import { Credentials, CredentialsHTTP } from './Credentials';
 import { Resolver } from 'did-resolver'
 import { getResolver } from 'web-did-resolver'
@@ -23,8 +23,8 @@ export class Venue implements VenueInterface {
   constructor(options: VenueOptions = {}) {
     
     
-    this.baseUrl = options.baseUrl || 'https://venue-test.covia.ai';
-    this.venueId = options.venueId || "did:web:venue-test.covia.ai";
+    this.baseUrl = options.baseUrl || '';
+    this.venueId = options.venueId || '';
     this.credentials  = options.credentials || new CredentialsHTTP(this.venueId,"","");
     this.metadata = {
         name: options.name || "default",
@@ -276,13 +276,16 @@ export class Venue implements VenueInterface {
         operation: assetId,
         input: input
       };
-      return fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
-        method: 'POST', 
-        headers: this.setCredentialsInHeader(),
-        body: JSON.stringify(payload),
-      }).catch(error => {
+        try {
+        const response =   await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
+          method: 'POST',
+          headers: this.setCredentialsInHeader(),
+          body: JSON.stringify(payload),
+        });
+        return new Job(response?.id, this, response);
+      } catch (error) {
         throw error;
-      });
+      }
     }
 
     private setCredentialsInHeader() : any{  

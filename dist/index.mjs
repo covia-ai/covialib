@@ -205,8 +205,8 @@ var resolver = new Resolver(webResolver);
 var cache2 = /* @__PURE__ */ new Map();
 var Venue = class _Venue {
   constructor(options = {}) {
-    this.baseUrl = options.baseUrl || "https://venue-test.covia.ai";
-    this.venueId = options.venueId || "did:web:venue-test.covia.ai";
+    this.baseUrl = options.baseUrl || "";
+    this.venueId = options.venueId || "";
     this.credentials = options.credentials || new CredentialsHTTP(this.venueId, "", "");
     this.metadata = {
       name: options.name || "default",
@@ -420,13 +420,16 @@ var Venue = class _Venue {
       operation: assetId,
       input
     };
-    return fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
-      method: "POST",
-      headers: this.setCredentialsInHeader(),
-      body: JSON.stringify(payload)
-    }).catch((error) => {
+    try {
+      const response = await fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
+        method: "POST",
+        headers: this.setCredentialsInHeader(),
+        body: JSON.stringify(payload)
+      });
+      return new Job(response?.id, this, response);
+    } catch (error) {
       throw error;
-    });
+    }
   }
   setCredentialsInHeader() {
     if (this.credentials.userId && this.credentials.userId != "") {

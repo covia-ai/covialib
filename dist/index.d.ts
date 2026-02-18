@@ -232,12 +232,13 @@ interface OperationPayload {
     [key: string]: any;
 }
 interface JobMetadata {
-    id: string;
+    name?: string;
     status?: RunStatus;
     created?: string;
     updated?: string;
     input?: any;
     output?: any;
+    op?: string;
     [key: string]: any;
 }
 interface InvokePayload {

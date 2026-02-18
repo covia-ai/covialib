@@ -20,17 +20,29 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src --ext .ts",
     "test": "jest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm test",
+    "prepare": "npm run build"
   },
   "keywords": [
+    "covia",
+    "grid",
+    "api",
     "typescript",
-    "library"
+    "data-assets",
+    "operations"
   ],
-  "author": "Your Name",
+   "author": "Covia AI",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/covia-ai/covialib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/covia-ai/covialib/issues"
+  },
+  "homepage": "https://github.com/covia-ai/covialib#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
