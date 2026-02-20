@@ -62,11 +62,6 @@ await dataAsset.uploadContent(content);
 - Node.js >= 18.0.0
 - TypeScript >= 5.0.0 (for TypeScript users)
 
-## Testing
-
-```bash
-# Run tests
-npm test
 
 ## TypeScript Support
 
@@ -74,6 +69,11 @@ npm test
 
 ```typescript
 import { Venue, Operation, DataAsset, CoviaError, AssetMetadata } from 'covialib';
+
+## Testing
+
+```bash
+npm test
 
 ## Resources
 
@@ -98,3 +98,4 @@ For questions, issues, or feature requests:
 
 
 Built with ❤️ by [Covia Labs](https://covia.ai) - Foundational infrastructure for the agent economy
+
