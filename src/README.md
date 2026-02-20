@@ -26,10 +26,7 @@ Asset (abstract base class)
 import { Venue, Asset, Operation, DataAsset } from '@/lib/covia';
 
 // Create venue
-const venue = new Venue({ 
-  baseUrl: 'https://venue-test.covia.ai',
-  venueId: 'my-venue' 
-});
+const venue = await Grid.connect("venue-did");
 
 // Get assets (returns Operation or DataAsset based on metadata)
 const operation = await venue.getAsset('op-id');

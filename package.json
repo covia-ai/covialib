@@ -1,5 +1,5 @@
 {
-  "name": "@covia-ai/covialib",
+  "name": "@covia/covialib",
   "version": "1.0.0",
   "description": "Typescript library for covia-ai",
   "main": "./dist/index.js",
@@ -31,7 +31,7 @@
     "data-assets",
     "operations"
   ],
-   "author": "Covia AI",
+  "author": "Covia AI",
   "license": "MIT",
   "repository": {
     "type": "git",

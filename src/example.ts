@@ -6,11 +6,8 @@ import { Grid } from './Grid';
 async function example() {
   try {
     // Create a venue connection
-    const venue = new Venue({
-      baseUrl: 'https://venue-test.covia.ai',
-      venueId: 'my-venue'
-    });
-
+    const venue  =  await Grid.connect('did:web:venue-test.covia.ai')
+    
     // Get all assets
     const assets = await venue.getAssets();
     console.log('Found assets:', assets.length);
@@ -28,7 +25,7 @@ async function example() {
     console.log('Operation:', operation);
 
     // Invoke an operation with simplified API
-    const result = await operation.run({ length: '100' });
+    const result = await operation.invoke({ length: '100' });
     console.log('Operation result:', result);
 
     // Get data asset
