@@ -8,10 +8,6 @@ TypeScript SDK for [Covia.ai](https://covia.ai) - The Universal Grid for AI Orch
 
 Covia.ai provides federated execution, cryptographic verification, and shared state management for AI agents across organizations, clouds, and platforms.
 
-[![npm version](https://badge.fury.io/js/@covia%2Fcovialib.svg)](https://www.npmjs.com/package/@covia/covialib)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 ## Features
 
 - 🔒 **Type-Safe API** - Full TypeScript support with complete type definitions
@@ -43,17 +39,19 @@ pnpm add @covia/covialib
 ## Quick Start
 
 ```typescript
-import { Grid } from '@/lib/covia';
+import { Grid } from '@covia/covialib';
 
-// Create venue
+// Connect to a venue
 const venue = await Grid.connect("venue-did");
 
 // Get assets (returns Operation or DataAsset based on metadata)
 const operation = await venue.getAsset('op-id');
 const dataAsset = await venue.getAsset('data-id');
 
-// Use inherited functionality
-await operation.invoke({ param: 'value' }); // Simplified: just pass input parameters
+// Invoke an operation
+await operation.invoke({ param: 'value' });
+
+// Upload data to a data asset
 await dataAsset.uploadContent(content);
 ```
 
@@ -62,18 +60,19 @@ await dataAsset.uploadContent(content);
 - Node.js >= 18.0.0
 - TypeScript >= 5.0.0 (for TypeScript users)
 
-
 ## TypeScript Support
 
-`covialib` is written in TypeScript and ships with full type declarations. No `@types/` package is needed.
+`@covia/covialib` is written in TypeScript and ships with full type declarations. No `@types/` package is needed.
 
 ```typescript
-import { Venue, Operation, DataAsset, CoviaError, AssetMetadata } from 'covialib';
+import { Venue, Operation, DataAsset, CoviaError, AssetMetadata } from '@covia/covialib';
+```
 
 ## Testing
 
 ```bash
 npm test
+```
 
 ## Resources
 
@@ -90,12 +89,11 @@ MIT © Covia AI
 ## Support
 
 For questions, issues, or feature requests:
+
 - 📧 Email: info@covia.ai
 - 💬 GitHub Issues: [github.com/covia-ai/covialib/issues](https://github.com/covia-ai/covialib/issues)
 - 📚 Documentation: [docs.covia.ai](https://docs.covia.ai/)
 
 ---
 
-
 Built with ❤️ by [Covia Labs](https://covia.ai) - Foundational infrastructure for the agent economy
-
