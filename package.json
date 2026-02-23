@@ -1,5 +1,5 @@
 {
-  "name": "@covia/covialib",
+  "name": "@covia/covia-sdk",
   "version": "1.0.0",
   "description": "Typescript library for covia-ai",
   "main": "./dist/index.js",
@@ -35,12 +35,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/covia-ai/covialib.git"
+    "url": "https://github.com/covia-ai/covia-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/covia-ai/covialib/issues"
+    "url": "https://github.com/covia-ai/covia-sdk/issues"
   },
-  "homepage": "https://github.com/covia-ai/covialib#readme",
+  "homepage": "https://github.com/covia-ai/covia-sdk#readme",
   "publishConfig": {
     "access": "public"
   },
