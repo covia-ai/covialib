@@ -4,9 +4,47 @@ declare class Job {
     metadata: JobMetadata;
     constructor(id: string, venue: VenueInterface, metadata: JobMetadata);
     /**
-    * Cancels the execution of the job
-    * @returns {Promise<number>}
-    */
+     * Whether the job has reached a terminal state
+     */
+    get isFinished(): boolean;
+    /**
+     * Whether the job completed successfully
+     */
+    get isComplete(): boolean;
+    /**
+     * The job output.
+     * @throws {Error} If the job has not finished yet.
+     * @throws {JobFailedError} If the job finished with a non-COMPLETE status.
+     */
+    get output(): any;
+    /**
+     * Poll the venue for the latest job status.
+     * @throws {Error} If the job has no ID.
+     */
+    refresh(): Promise<void>;
+    /**
+     * Wait until the job reaches a terminal state.
+     * Uses exponential backoff polling (initial 300ms, factor 1.5, max 10s).
+     * @param options.timeout - Maximum milliseconds to wait. Undefined waits indefinitely.
+     * @throws {CoviaTimeoutError} If timeout is exceeded.
+     */
+    wait(options?: {
+        timeout?: number;
+    }): Promise<void>;
+    /**
+     * Wait for the job to complete and return its output.
+     * @param options.timeout - Maximum milliseconds to wait.
+     * @returns The job output.
+     * @throws {JobFailedError} If the job finishes with a non-COMPLETE status.
+     * @throws {CoviaTimeoutError} If timeout is exceeded.
+     */
+    result(options?: {
+        timeout?: number;
+    }): Promise<any>;
+    /**
+     * Cancels the execution of the job
+     * @returns {Promise<number>}
+     */
     cancelJob(): Promise<number>;
     /**
      * Delete the job
@@ -105,6 +143,12 @@ declare class Venue implements VenueInterface {
      */
     getAsset(assetId: AssetID): Promise<Asset>;
     /**
+     * List assets with pagination support
+     * @param options - Pagination options (offset, limit)
+     * @returns {Promise<AssetList>} Paginated list of asset IDs with metadata
+     */
+    listAssets(options?: AssetListOptions): Promise<AssetList>;
+    /**
      * Get all assets
      * @returns {Promise<Asset[]>}
      */
@@ -138,6 +182,32 @@ declare class Venue implements VenueInterface {
    */
     getStats(): Promise<StatusData>;
     /**
+     * List all named operations available on this venue
+     * @returns {Promise<OperationInfo[]>}
+     */
+    listOperations(): Promise<OperationInfo[]>;
+    /**
+     * Get details of a named operation
+     * @param name - Operation name (e.g., "test:echo")
+     * @returns {Promise<OperationInfo>}
+     */
+    getOperation(name: string): Promise<OperationInfo>;
+    /**
+     * Get the full DID document for this venue
+     * @returns {Promise<DIDDocument>}
+     */
+    didDocument(): Promise<DIDDocument>;
+    /**
+     * Get MCP (Model Context Protocol) discovery information
+     * @returns {Promise<MCPDiscovery>}
+     */
+    mcpDiscovery(): Promise<MCPDiscovery>;
+    /**
+     * Get the A2A (Agent-to-Agent) agent card
+     * @returns {Promise<AgentCard>}
+     */
+    agentCard(): Promise<AgentCard>;
+    /**
      * Get asset metadata
      * @returns {Promise<AssetMetadata>}
      */
@@ -165,6 +235,12 @@ declare class Venue implements VenueInterface {
     * @returns {Promise<Job>}
     */
     invoke(assetId: string, input: any): Promise<Job>;
+    /** Alias for createAsset — matches Python SDK naming */
+    register(assetData: any): Promise<Asset>;
+    /** Alias for getStats — matches Python SDK naming */
+    status(): Promise<StatusData>;
+    /** Alias for uploadContent — matches Python SDK naming */
+    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     private setCredentialsInHeader;
 }
 
@@ -197,6 +273,18 @@ interface VenueInterface {
     getContent(assetId: string): Promise<ReadableStream<Uint8Array> | null>;
     run(assetId: string, input: any): Promise<any>;
     invoke(assetId: string, input: any): Promise<Job>;
+    listAssets(options?: AssetListOptions): Promise<AssetList>;
+    listOperations(): Promise<OperationInfo[]>;
+    getOperation(name: string): Promise<OperationInfo>;
+    didDocument(): Promise<DIDDocument>;
+    mcpDiscovery(): Promise<MCPDiscovery>;
+    agentCard(): Promise<AgentCard>;
+    /** Alias for createAsset — matches Python SDK naming */
+    register(assetData: any): Promise<Asset>;
+    /** Alias for getStats — matches Python SDK naming */
+    status(): Promise<StatusData>;
+    /** Alias for uploadContent — matches Python SDK naming */
+    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
 }
 type AssetID = string;
 interface AssetMetadata {
@@ -257,6 +345,9 @@ declare enum RunStatus {
     AUTH_REQUIRED = "AUTH_REQUIRED",
     PAUSED = "PAUSED"
 }
+/** Alias for RunStatus — matches Python SDK naming */
+declare const JobStatus: typeof RunStatus;
+type JobStatus = RunStatus;
 interface StatusData {
     url?: string;
     ts?: string;
@@ -271,9 +362,82 @@ interface StatsData {
     ops?: number;
     jobs?: number;
 }
+interface AssetListOptions {
+    offset?: number;
+    limit?: number;
+}
+interface AssetList {
+    items: string[];
+    total: number;
+    offset: number;
+    limit: number;
+}
+interface MCPDiscovery {
+    mcp_version?: string;
+    server_url?: string;
+    description?: string;
+    tools_endpoint?: string;
+    endpoint?: Record<string, any> | string;
+    [key: string]: any;
+}
+interface AgentCard {
+    agentProvider?: Record<string, any>;
+    agentCapabilities?: Record<string, any>;
+    agentSkills?: Record<string, any>[];
+    agentInterfaces?: Record<string, any>[];
+    securityScheme?: Record<string, any>;
+    preferredTransport?: Record<string, any>;
+    [key: string]: any;
+}
+interface DIDDocument {
+    id: string;
+    '@context'?: string | string[];
+    [key: string]: any;
+}
+interface OperationInfo {
+    name: string;
+    asset: string;
+    description?: string;
+    input?: any;
+    output?: any;
+    [key: string]: any;
+}
 declare class CoviaError extends Error {
     code: number | null;
     constructor(message: string, code?: number | null);
+}
+/** Raised when the Covia API returns an error response (4xx/5xx). */
+declare class GridError extends CoviaError {
+    statusCode: number;
+    responseBody: any;
+    constructor(statusCode: number, message: string, responseBody?: any);
+}
+/** Raised when the SDK cannot connect to the venue. */
+declare class CoviaConnectionError extends CoviaError {
+    constructor(message: string);
+}
+/** Raised when an operation or polling loop times out. */
+declare class CoviaTimeoutError extends CoviaError {
+    constructor(message: string);
+}
+/** Raised when a job finishes with a non-COMPLETE status. */
+declare class JobFailedError extends CoviaError {
+    jobData: JobMetadata;
+    constructor(jobData: JobMetadata);
+}
+/** Raised when a requested resource is not found (404). */
+declare class NotFoundError extends GridError {
+    constructor(message: string);
+}
+/** Raised when an asset is not found (404). */
+declare class AssetNotFoundError extends NotFoundError {
+    assetId: string;
+    constructor(assetId: string);
+}
+/** Raised when a job is not found (404). */
+declare class JobNotFoundError extends NotFoundError {
+    jobId: string;
+    constructor(jobId: string);
 }
 
 /**
@@ -323,6 +487,24 @@ declare function getParsedAssetId(assetId: string): string;
 declare function getAssetIdFromPath(assetHex: string, assetPath: string): string;
 declare function getAssetIdFromVenueId(assetHex: string, venueId: string): string;
 
+/**
+ * Simple logger for the Covia SDK.
+ *
+ * By default logging is disabled (level = 'none'). Enable debug output with:
+ *   import { logger } from '@covia/covia-sdk';
+ *   logger.level = 'debug';
+ *
+ * Or provide a custom log function:
+ *   logger.handler = (level, msg) => myLogger.log(level, msg);
+ */
+type LogLevel = 'debug' | 'none';
+type LogHandler = (level: string, message: string) => void;
+declare const logger: {
+    level: LogLevel;
+    handler: LogHandler;
+    debug(message: string): void;
+};
+
 declare class Grid {
     /**
     * Static method to connect to a venue
@@ -340,4 +522,4 @@ declare class DataAsset extends Asset {
     constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
 }
 
-export { Asset, type AssetID, type AssetMetadata, type ContentDetails, CoviaError, type Credentials, CredentialsHTTP, DataAsset, Grid, type InvokePayload, Job, type JobMetadata, Operation, type OperationDetails, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueData, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };
+export { type AgentCard, Asset, type AssetID, type AssetList, type AssetListOptions, type AssetMetadata, AssetNotFoundError, type ContentDetails, CoviaConnectionError, CoviaError, CoviaTimeoutError, type Credentials, CredentialsHTTP, type DIDDocument, DataAsset, Grid, GridError, type InvokePayload, Job, JobFailedError, type JobMetadata, JobNotFoundError, JobStatus, type MCPDiscovery, NotFoundError, Operation, type OperationDetails, type OperationInfo, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueData, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };

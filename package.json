@@ -20,6 +20,8 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src --ext .ts",
     "test": "jest",
+    "test:unit": "jest src/__tests__/",
+    "test:integration": "jest venue.test.ts",
     "prepublishOnly": "npm run build && npm test",
     "prepare": "npm run build"
   },

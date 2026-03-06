@@ -1,0 +1,46 @@
+import { Grid } from '../Grid';
+import { Venue } from '../Venue';
+
+jest.mock('../Venue', () => {
+  const mockVenue = {
+    baseUrl: 'https://example.com',
+    venueId: 'did:web:example.com',
+    metadata: { name: 'Test' },
+  };
+  return {
+    Venue: {
+      connect: jest.fn().mockResolvedValue(mockVenue),
+    },
+  };
+});
+
+describe('Grid', () => {
+  beforeEach(() => {
+    // Clear the Grid cache between tests by re-requiring
+    // Since the cache is module-level, we reset mocks instead
+    (Venue.connect as jest.Mock).mockClear();
+  });
+
+  it('connect delegates to Venue.connect', async () => {
+    const venue = await Grid.connect('https://new-venue.example.com');
+    expect(Venue.connect).toHaveBeenCalledWith('https://new-venue.example.com', undefined);
+    expect(venue.venueId).toBe('did:web:example.com');
+  });
+
+  it('connect passes credentials to Venue.connect', async () => {
+    const { CredentialsHTTP } = jest.requireActual('../Credentials');
+    const creds = new CredentialsHTTP('v', 'k', 'u');
+    await Grid.connect('https://creds-venue.example.com', creds);
+    expect(Venue.connect).toHaveBeenCalledWith('https://creds-venue.example.com', creds);
+  });
+
+  it('returns cached venue on second call with same ID', async () => {
+    const venueId = 'https://cached-venue.example.com';
+    const first = await Grid.connect(venueId);
+    const second = await Grid.connect(venueId);
+
+    // Venue.connect should only be called once for the same ID
+    expect(Venue.connect).toHaveBeenCalledTimes(1);
+    expect(first).toBe(second);
+  });
+});

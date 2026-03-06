@@ -1,4 +1,51 @@
-import { CoviaError, RunStatus } from './types';
+import { CoviaError, CoviaConnectionError, GridError, NotFoundError, RunStatus } from './types';
+import { logger } from './Logger';
+
+/**
+ * Parse error message from an API response body.
+ */
+async function parseErrorBody(response: Response): Promise<{ message: string; body: any }> {
+  let body: any = null;
+  let message = `Request failed with status ${response.status}`;
+  try {
+    body = await response.json();
+    if (body?.error) {
+      message = body.error;
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      if (text) message = text;
+    } catch {
+      // use default message
+    }
+  }
+  return { message, body };
+}
+
+/**
+ * Throw the appropriate error subclass for an HTTP error response.
+ */
+async function throwHttpError(response: Response): Promise<never> {
+  const { message, body } = await parseErrorBody(response);
+  if (response.status === 404) {
+    throw new NotFoundError(message);
+  }
+  throw new GridError(response.status, message, body);
+}
+
+/**
+ * Wrap a non-CoviaError into the appropriate subclass.
+ */
+function wrapError(error: unknown): CoviaError {
+  if (error instanceof CoviaError) return error;
+  const msg = (error as Error).message ?? String(error);
+  // Detect network/connection errors from fetch
+  if (error instanceof TypeError) {
+    return new CoviaConnectionError(msg);
+  }
+  return new CoviaError(`Request failed: ${msg}`);
+}
 
 /**
  * Utility function to handle API calls with consistent error handling
@@ -6,19 +53,22 @@ import { CoviaError, RunStatus } from './types';
  * @param options - Fetch options
  * @returns {Promise<T>} The response data
  */
-export function fetchWithError<T>(url: string, options?: RequestInit): Promise<T> {
-  return fetch(url, options)
-    .then(response => {
-      if (!response.ok) {
-        throw new CoviaError(`Request failed! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .catch(error => {
-      throw error instanceof CoviaError
-        ? error
-        : new CoviaError(`Request failed: ${(error as Error).message}`);
-    });
+export async function fetchWithError<T>(url: string, options?: RequestInit): Promise<T> {
+  const method = options?.method ?? 'GET';
+  logger.debug(`${method} ${url}`);
+  let response: Response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    const msg = (error as Error).message ?? String(error);
+    logger.debug(`Connection failed: ${method} ${url} — ${msg}`);
+    throw wrapError(error);
+  }
+  logger.debug(`${method} ${url} → ${response.status}`);
+  if (!response.ok) {
+    await throwHttpError(response);
+  }
+  return response.json();
 }
 
 /**
@@ -27,20 +77,23 @@ export function fetchWithError<T>(url: string, options?: RequestInit): Promise<T
  * @param options - Fetch options
  * @returns {Promise<Response>} The fetch response
  */
-export function fetchStreamWithError(url: string, options?: RequestInit): Promise<Response> {
-  return fetch(url, options)
-    .then(response => {
-      if (!response.ok) {
-        throw new CoviaError(`Request failed! status: ${response.status}`);
-      }
-      return response;
-    })
-    .catch(error => {
-      throw error instanceof CoviaError
-        ? error
-        : new CoviaError(`Request failed: ${(error as Error).message}`);
-    });
-} 
+export async function fetchStreamWithError(url: string, options?: RequestInit): Promise<Response> {
+  const method = options?.method ?? 'GET';
+  logger.debug(`${method} ${url}`);
+  let response: Response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    const msg = (error as Error).message ?? String(error);
+    logger.debug(`Connection failed: ${method} ${url} — ${msg}`);
+    throw wrapError(error);
+  }
+  logger.debug(`${method} ${url} → ${response.status}`);
+  if (!response.ok) {
+    await throwHttpError(response);
+  }
+  return response;
+}
 /**
  * Utility function to check if job is considered completed
  * @param jobStatus - The status of the job
@@ -59,7 +112,9 @@ export function isJobComplete(jobStatus:RunStatus): boolean {
 export function isJobPaused(jobStatus:RunStatus): boolean {
   if(jobStatus == null)
       return false;
-  return jobStatus == RunStatus.PAUSED ? true:false
+  return jobStatus == RunStatus.PAUSED
+      || jobStatus == RunStatus.INPUT_REQUIRED
+      || jobStatus == RunStatus.AUTH_REQUIRED;
 }
 /**
  * Utility function to check if job is considered finished
@@ -74,6 +129,7 @@ export function isJobFinished(jobStatus:RunStatus): boolean {
   if (jobStatus == RunStatus.FAILED) return true;
   if (jobStatus == RunStatus.REJECTED) return true;
   if (jobStatus == RunStatus.CANCELLED) return true;
+  if (jobStatus == RunStatus.TIMEOUT) return true;
 
   return false;
 }

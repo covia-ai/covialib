@@ -1,4 +1,4 @@
-import { CoviaError, VenueOptions, VenueData, AssetMetadata, VenueInterface, AssetID, StatusData } from './types';
+import { CoviaError, VenueOptions, VenueData, AssetMetadata, VenueInterface, AssetID, StatusData, OperationInfo, AssetListOptions, AssetList, DIDDocument, MCPDiscovery, AgentCard, NotFoundError, AssetNotFoundError, JobNotFoundError } from './types';
 import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
@@ -124,26 +124,40 @@ export class Venue implements VenueInterface {
   async getAsset(assetId: AssetID): Promise<Asset> {
     if (cache.has(assetId)) {
       const cachedData = cache.get(assetId);
-      // Determine asset type from metadata and return appropriate concrete class
       if (cachedData.metadata?.operation) {
         return new Operation(assetId, this, cachedData);
       } else {
         return new DataAsset(assetId, this, cachedData);
       }
-    } else {
-      return fetchWithError<any>(`${this.baseUrl}/api/v1/assets/${assetId}`)
-        .then(data => {
-          cache.set(assetId, data);
-          
-          // Determine asset type from metadata and return appropriate concrete class
-          // TODO: Do we actually need separate concrete classes?
-          if (data.metadata?.operation) {
-            return new Operation(assetId, this, data);
-          } else {
-            return new DataAsset(assetId, this, data);
-          }
-        });
     }
+    try {
+      const data = await fetchWithError<any>(`${this.baseUrl}/api/v1/assets/${assetId}`);
+      cache.set(assetId, data);
+      if (data.metadata?.operation) {
+        return new Operation(assetId, this, data);
+      } else {
+        return new DataAsset(assetId, this, data);
+      }
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * List assets with pagination support
+   * @param options - Pagination options (offset, limit)
+   * @returns {Promise<AssetList>} Paginated list of asset IDs with metadata
+   */
+  async listAssets(options: AssetListOptions = {}): Promise<AssetList> {
+    const params = new URLSearchParams();
+    params.set('offset', String(options.offset ?? 0));
+    if (options.limit !== undefined) {
+      params.set('limit', String(options.limit));
+    }
+    return fetchWithError<AssetList>(`${this.baseUrl}/api/v1/assets/?${params.toString()}`);
   }
 
   /**
@@ -173,9 +187,15 @@ export class Venue implements VenueInterface {
    * @returns {Promise<Job>}
    */
   async getJob(jobId: string): Promise<Job> {
-    return fetchWithError<Job>(`${this.baseUrl}/api/v1/jobs/${jobId}`).then(data => {
-            return new Job(jobId, this, data);
-    });
+    try {
+      const data = await fetchWithError<any>(`${this.baseUrl}/api/v1/jobs/${jobId}`);
+      return new Job(jobId, this, data);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
 
    /**
@@ -184,10 +204,15 @@ export class Venue implements VenueInterface {
    * @returns {Promise<number>}
    */
   async cancelJob(jobId: string):  Promise<number> {
-     return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/cancel`, { method: 'PUT'})
-     .then((response) =>{
-        return response.status
-    });
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/cancel`, { method: 'PUT'});
+      return response.status;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
 
    /**
@@ -196,10 +221,15 @@ export class Venue implements VenueInterface {
    * @returns {Promise<number>}
    */
   async deleteJob(jobId: string):  Promise<number> {
-     return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/delete`, { method: 'PUT'})
-     .then((response) =>{
-        return response.status
-    });
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/delete`, { method: 'PUT'});
+      return response.status;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
 
 
@@ -211,13 +241,61 @@ export class Venue implements VenueInterface {
       return fetchWithError<StatusData>(`${this.baseUrl}/api/v1/status`);
   }
 
+  /**
+   * List all named operations available on this venue
+   * @returns {Promise<OperationInfo[]>}
+   */
+  async listOperations(): Promise<OperationInfo[]> {
+    return fetchWithError<OperationInfo[]>(`${this.baseUrl}/api/v1/operations`);
+  }
+
+  /**
+   * Get details of a named operation
+   * @param name - Operation name (e.g., "test:echo")
+   * @returns {Promise<OperationInfo>}
+   */
+  async getOperation(name: string): Promise<OperationInfo> {
+    return fetchWithError<OperationInfo>(`${this.baseUrl}/api/v1/operations/${name}`);
+  }
+
+  /**
+   * Get the full DID document for this venue
+   * @returns {Promise<DIDDocument>}
+   */
+  async didDocument(): Promise<DIDDocument> {
+    return fetchWithError<DIDDocument>(`${this.baseUrl}/.well-known/did.json`);
+  }
+
+  /**
+   * Get MCP (Model Context Protocol) discovery information
+   * @returns {Promise<MCPDiscovery>}
+   */
+  async mcpDiscovery(): Promise<MCPDiscovery> {
+    return fetchWithError<MCPDiscovery>(`${this.baseUrl}/.well-known/mcp`);
+  }
+
+  /**
+   * Get the A2A (Agent-to-Agent) agent card
+   * @returns {Promise<AgentCard>}
+   */
+  async agentCard(): Promise<AgentCard> {
+    return fetchWithError<AgentCard>(`${this.baseUrl}/.well-known/agent-card.json`);
+  }
+
   
     /**
      * Get asset metadata
      * @returns {Promise<AssetMetadata>}
      */
     async getMetadata(assetId:string): Promise<AssetMetadata> {
-      return await fetchWithError<AssetMetadata>(`${this.baseUrl}/api/v1/assets/${assetId}`);
+      try {
+        return await fetchWithError<AssetMetadata>(`${this.baseUrl}/api/v1/assets/${assetId}`);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          throw new AssetNotFoundError(assetId);
+        }
+        throw error;
+      }
     }
 
       /**
@@ -226,12 +304,19 @@ export class Venue implements VenueInterface {
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
   async uploadContent(assetId:string, content: BodyInit ): Promise<ReadableStream<Uint8Array> | null> {
-    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
-      method: 'PUT',
-      headers: this.setCredentialsInHeader(),
-      body: content,
-    });
-    return response.body;
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
+        method: 'PUT',
+        headers: this.setCredentialsInHeader(),
+        body: content,
+      });
+      return response.body;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -239,8 +324,15 @@ export class Venue implements VenueInterface {
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
   async getContent(assetId:string): Promise<ReadableStream<Uint8Array> | null> {
-    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`);
-    return response.body;
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`);
+      return response.body;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -286,6 +378,21 @@ export class Venue implements VenueInterface {
       } catch (error) {
         throw error;
       }
+    }
+
+    /** Alias for createAsset — matches Python SDK naming */
+    async register(assetData: any): Promise<Asset> {
+      return this.createAsset(assetData);
+    }
+
+    /** Alias for getStats — matches Python SDK naming */
+    status(): Promise<StatusData> {
+      return this.getStats();
+    }
+
+    /** Alias for uploadContent — matches Python SDK naming */
+    async putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null> {
+      return this.uploadContent(assetId, content);
     }
 
     private setCredentialsInHeader() : any{  

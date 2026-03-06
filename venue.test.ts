@@ -1,4 +1,4 @@
-import { Venue,  CoviaError,  StatusData, Job, Grid, RunStatus, isJobComplete, isJobFinished, getParsedAssetId, getAssetIdFromPath, getAssetIdFromVenueId } from './src/index';
+import { Venue,  CoviaError, GridError, NotFoundError,  StatusData, Job, Grid, RunStatus, isJobComplete, isJobFinished, getParsedAssetId, getAssetIdFromPath, getAssetIdFromVenueId } from './src/index';
 
 let venue:Venue;
 
@@ -91,10 +91,10 @@ test('venueDataAsset', () => {
 
 
 test('venueDoesNotHaveAssetId', () => {
-   expect(venue.getAsset('42322')).rejects.toEqual(new CoviaError('Request failed! status: 400'));
+   expect(venue.getAsset('42322')).rejects.toThrow(GridError);
 });
 test('venueHasNoData', () => {
-   expect(venue.getJob('xyz')).rejects.toEqual(new CoviaError('Request failed! status: 404'));
+   expect(venue.getJob('xyz')).rejects.toThrow(NotFoundError);
 });
 
 test('venueRunOpAndCancel', () => {

@@ -2,25 +2,79 @@ import { Resolver } from 'did-resolver';
 import { getResolver } from 'web-did-resolver';
 
 // src/types.ts
-var RunStatus = /* @__PURE__ */ ((RunStatus2) => {
-  RunStatus2["COMPLETE"] = "COMPLETE";
-  RunStatus2["FAILED"] = "FAILED";
-  RunStatus2["PENDING"] = "PENDING";
-  RunStatus2["STARTED"] = "STARTED";
-  RunStatus2["CANCELLED"] = "CANCELLED";
-  RunStatus2["TIMEOUT"] = "TIMEOUT";
-  RunStatus2["REJECTED"] = "REJECTED";
-  RunStatus2["INPUT_REQUIRED"] = "INPUT_REQUIRED";
-  RunStatus2["AUTH_REQUIRED"] = "AUTH_REQUIRED";
-  RunStatus2["PAUSED"] = "PAUSED";
-  return RunStatus2;
+var RunStatus = /* @__PURE__ */ ((RunStatus3) => {
+  RunStatus3["COMPLETE"] = "COMPLETE";
+  RunStatus3["FAILED"] = "FAILED";
+  RunStatus3["PENDING"] = "PENDING";
+  RunStatus3["STARTED"] = "STARTED";
+  RunStatus3["CANCELLED"] = "CANCELLED";
+  RunStatus3["TIMEOUT"] = "TIMEOUT";
+  RunStatus3["REJECTED"] = "REJECTED";
+  RunStatus3["INPUT_REQUIRED"] = "INPUT_REQUIRED";
+  RunStatus3["AUTH_REQUIRED"] = "AUTH_REQUIRED";
+  RunStatus3["PAUSED"] = "PAUSED";
+  return RunStatus3;
 })(RunStatus || {});
+var JobStatus = RunStatus;
 var CoviaError = class extends Error {
   constructor(message, code = null) {
     super(message);
     this.name = "CoviaError";
     this.code = code;
     this.message = message;
+  }
+};
+var GridError = class extends CoviaError {
+  constructor(statusCode, message, responseBody = null) {
+    super(`HTTP ${statusCode}: ${message}`, statusCode);
+    this.name = "GridError";
+    this.statusCode = statusCode;
+    this.responseBody = responseBody;
+  }
+};
+var CoviaConnectionError = class extends CoviaError {
+  constructor(message) {
+    super(message);
+    this.name = "CoviaConnectionError";
+  }
+};
+var CoviaTimeoutError = class extends CoviaError {
+  constructor(message) {
+    super(message);
+    this.name = "CoviaTimeoutError";
+  }
+};
+var JobFailedError = class extends CoviaError {
+  constructor(jobData) {
+    const id = jobData.id ?? "unknown";
+    const status = jobData.status ?? "unknown";
+    let msg = `Job ${id} ${status}`;
+    if (jobData.output?.error) {
+      msg += `: ${jobData.output.error}`;
+    }
+    super(msg);
+    this.name = "JobFailedError";
+    this.jobData = jobData;
+  }
+};
+var NotFoundError = class extends GridError {
+  constructor(message) {
+    super(404, message);
+    this.name = "NotFoundError";
+  }
+};
+var AssetNotFoundError = class extends NotFoundError {
+  constructor(assetId) {
+    super(`Asset not found: ${assetId}`);
+    this.name = "AssetNotFoundError";
+    this.assetId = assetId;
+  }
+};
+var JobNotFoundError = class extends NotFoundError {
+  constructor(jobId) {
+    super(`Job not found: ${jobId}`);
+    this.name = "JobNotFoundError";
+    this.jobId = jobId;
   }
 };
 
@@ -33,26 +87,86 @@ var CredentialsHTTP = class {
   }
 };
 
+// src/Logger.ts
+var defaultHandler = (_level, message) => {
+  console.debug(`[covia] ${message}`);
+};
+var logger = {
+  level: "none",
+  handler: defaultHandler,
+  debug(message) {
+    if (this.level === "debug") {
+      this.handler("debug", message);
+    }
+  }
+};
+
 // src/Utils.ts
-function fetchWithError(url, options) {
-  return fetch(url, options).then((response) => {
-    if (!response.ok) {
-      throw new CoviaError(`Request failed! status: ${response.status}`);
+async function parseErrorBody(response) {
+  let body = null;
+  let message = `Request failed with status ${response.status}`;
+  try {
+    body = await response.json();
+    if (body?.error) {
+      message = body.error;
     }
-    return response.json();
-  }).catch((error) => {
-    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
-  });
+  } catch {
+    try {
+      const text = await response.text();
+      if (text) message = text;
+    } catch {
+    }
+  }
+  return { message, body };
 }
-function fetchStreamWithError(url, options) {
-  return fetch(url, options).then((response) => {
-    if (!response.ok) {
-      throw new CoviaError(`Request failed! status: ${response.status}`);
-    }
-    return response;
-  }).catch((error) => {
-    throw error instanceof CoviaError ? error : new CoviaError(`Request failed: ${error.message}`);
-  });
+async function throwHttpError(response) {
+  const { message, body } = await parseErrorBody(response);
+  if (response.status === 404) {
+    throw new NotFoundError(message);
+  }
+  throw new GridError(response.status, message, body);
+}
+function wrapError(error) {
+  if (error instanceof CoviaError) return error;
+  const msg = error.message ?? String(error);
+  if (error instanceof TypeError) {
+    return new CoviaConnectionError(msg);
+  }
+  return new CoviaError(`Request failed: ${msg}`);
+}
+async function fetchWithError(url, options) {
+  const method = options?.method ?? "GET";
+  logger.debug(`${method} ${url}`);
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    const msg = error.message ?? String(error);
+    logger.debug(`Connection failed: ${method} ${url} \u2014 ${msg}`);
+    throw wrapError(error);
+  }
+  logger.debug(`${method} ${url} \u2192 ${response.status}`);
+  if (!response.ok) {
+    await throwHttpError(response);
+  }
+  return response.json();
+}
+async function fetchStreamWithError(url, options) {
+  const method = options?.method ?? "GET";
+  logger.debug(`${method} ${url}`);
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    const msg = error.message ?? String(error);
+    logger.debug(`Connection failed: ${method} ${url} \u2014 ${msg}`);
+    throw wrapError(error);
+  }
+  logger.debug(`${method} ${url} \u2192 ${response.status}`);
+  if (!response.ok) {
+    await throwHttpError(response);
+  }
+  return response;
 }
 function isJobComplete(jobStatus) {
   if (jobStatus == null)
@@ -62,7 +176,7 @@ function isJobComplete(jobStatus) {
 function isJobPaused(jobStatus) {
   if (jobStatus == null)
     return false;
-  return jobStatus == "PAUSED" /* PAUSED */ ? true : false;
+  return jobStatus == "PAUSED" /* PAUSED */ || jobStatus == "INPUT_REQUIRED" /* INPUT_REQUIRED */ || jobStatus == "AUTH_REQUIRED" /* AUTH_REQUIRED */;
 }
 function isJobFinished(jobStatus) {
   if (jobStatus == null)
@@ -71,6 +185,7 @@ function isJobFinished(jobStatus) {
   if (jobStatus == "FAILED" /* FAILED */) return true;
   if (jobStatus == "REJECTED" /* REJECTED */) return true;
   if (jobStatus == "CANCELLED" /* CANCELLED */) return true;
+  if (jobStatus == "TIMEOUT" /* TIMEOUT */) return true;
   return false;
 }
 function getParsedAssetId(assetId) {
@@ -177,6 +292,9 @@ var DataAsset = class extends Asset {
 };
 
 // src/Job.ts
+var INITIAL_POLL_DELAY = 300;
+var BACKOFF_FACTOR = 1.5;
+var MAX_POLL_DELAY = 1e4;
 var Job = class {
   constructor(id, venue, metadata) {
     this.id = id;
@@ -184,9 +302,78 @@ var Job = class {
     this.metadata = metadata;
   }
   /**
-  * Cancels the execution of the job
-  * @returns {Promise<number>}
-  */
+   * Whether the job has reached a terminal state
+   */
+  get isFinished() {
+    return this.metadata.status != null && isJobFinished(this.metadata.status);
+  }
+  /**
+   * Whether the job completed successfully
+   */
+  get isComplete() {
+    return this.metadata.status != null && isJobComplete(this.metadata.status);
+  }
+  /**
+   * The job output.
+   * @throws {Error} If the job has not finished yet.
+   * @throws {JobFailedError} If the job finished with a non-COMPLETE status.
+   */
+  get output() {
+    if (!this.isFinished) {
+      throw new Error(`Job is not finished (status: ${this.metadata.status})`);
+    }
+    if (!this.isComplete) {
+      throw new JobFailedError(this.metadata);
+    }
+    return this.metadata.output;
+  }
+  /**
+   * Poll the venue for the latest job status.
+   * @throws {Error} If the job has no ID.
+   */
+  async refresh() {
+    if (!this.id) {
+      throw new Error("Cannot refresh a job with no ID");
+    }
+    const job = await this.venue.getJob(this.id);
+    this.metadata = job.metadata;
+  }
+  /**
+   * Wait until the job reaches a terminal state.
+   * Uses exponential backoff polling (initial 300ms, factor 1.5, max 10s).
+   * @param options.timeout - Maximum milliseconds to wait. Undefined waits indefinitely.
+   * @throws {CoviaTimeoutError} If timeout is exceeded.
+   */
+  async wait(options) {
+    if (this.isFinished) return;
+    let delay = INITIAL_POLL_DELAY;
+    const start = Date.now();
+    logger.debug(`Polling job ${this.id} (status: ${this.metadata.status})`);
+    while (!this.isFinished) {
+      if (options?.timeout !== void 0 && Date.now() - start > options.timeout) {
+        throw new CoviaTimeoutError(`Job ${this.id} did not finish within ${options.timeout}ms`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      await this.refresh();
+      logger.debug(`Job ${this.id} polled \u2192 ${this.metadata.status} (delay=${(delay / 1e3).toFixed(1)}s)`);
+      delay = Math.min(delay * BACKOFF_FACTOR, MAX_POLL_DELAY);
+    }
+  }
+  /**
+   * Wait for the job to complete and return its output.
+   * @param options.timeout - Maximum milliseconds to wait.
+   * @returns The job output.
+   * @throws {JobFailedError} If the job finishes with a non-COMPLETE status.
+   * @throws {CoviaTimeoutError} If timeout is exceeded.
+   */
+  async result(options) {
+    await this.wait(options);
+    return this.output;
+  }
+  /**
+   * Cancels the execution of the job
+   * @returns {Promise<number>}
+   */
   async cancelJob() {
     return this.venue.cancelJob(this.id);
   }
@@ -296,16 +483,34 @@ var Venue = class _Venue {
       } else {
         return new DataAsset(assetId, this, cachedData);
       }
-    } else {
-      return fetchWithError(`${this.baseUrl}/api/v1/assets/${assetId}`).then((data) => {
-        cache2.set(assetId, data);
-        if (data.metadata?.operation) {
-          return new Operation(assetId, this, data);
-        } else {
-          return new DataAsset(assetId, this, data);
-        }
-      });
     }
+    try {
+      const data = await fetchWithError(`${this.baseUrl}/api/v1/assets/${assetId}`);
+      cache2.set(assetId, data);
+      if (data.metadata?.operation) {
+        return new Operation(assetId, this, data);
+      } else {
+        return new DataAsset(assetId, this, data);
+      }
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
+  }
+  /**
+   * List assets with pagination support
+   * @param options - Pagination options (offset, limit)
+   * @returns {Promise<AssetList>} Paginated list of asset IDs with metadata
+   */
+  async listAssets(options = {}) {
+    const params = new URLSearchParams();
+    params.set("offset", String(options.offset ?? 0));
+    if (options.limit !== void 0) {
+      params.set("limit", String(options.limit));
+    }
+    return fetchWithError(`${this.baseUrl}/api/v1/assets/?${params.toString()}`);
   }
   /**
    * Get all assets
@@ -330,9 +535,15 @@ var Venue = class _Venue {
    * @returns {Promise<Job>}
    */
   async getJob(jobId) {
-    return fetchWithError(`${this.baseUrl}/api/v1/jobs/${jobId}`).then((data) => {
+    try {
+      const data = await fetchWithError(`${this.baseUrl}/api/v1/jobs/${jobId}`);
       return new Job(jobId, this, data);
-    });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
   /**
   * Cancel job by ID
@@ -340,9 +551,15 @@ var Venue = class _Venue {
   * @returns {Promise<number>}
   */
   async cancelJob(jobId) {
-    return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/cancel`, { method: "PUT" }).then((response) => {
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/cancel`, { method: "PUT" });
       return response.status;
-    });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
   /**
   * Delete job by ID
@@ -350,9 +567,15 @@ var Venue = class _Venue {
   * @returns {Promise<number>}
   */
   async deleteJob(jobId) {
-    return fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/delete`, { method: "PUT" }).then((response) => {
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/jobs/${jobId}/delete`, { method: "PUT" });
       return response.status;
-    });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new JobNotFoundError(jobId);
+      }
+      throw error;
+    }
   }
   /**
   * Get the DID (Decentralized Identifier) for this venue
@@ -362,11 +585,54 @@ var Venue = class _Venue {
     return fetchWithError(`${this.baseUrl}/api/v1/status`);
   }
   /**
+   * List all named operations available on this venue
+   * @returns {Promise<OperationInfo[]>}
+   */
+  async listOperations() {
+    return fetchWithError(`${this.baseUrl}/api/v1/operations`);
+  }
+  /**
+   * Get details of a named operation
+   * @param name - Operation name (e.g., "test:echo")
+   * @returns {Promise<OperationInfo>}
+   */
+  async getOperation(name) {
+    return fetchWithError(`${this.baseUrl}/api/v1/operations/${name}`);
+  }
+  /**
+   * Get the full DID document for this venue
+   * @returns {Promise<DIDDocument>}
+   */
+  async didDocument() {
+    return fetchWithError(`${this.baseUrl}/.well-known/did.json`);
+  }
+  /**
+   * Get MCP (Model Context Protocol) discovery information
+   * @returns {Promise<MCPDiscovery>}
+   */
+  async mcpDiscovery() {
+    return fetchWithError(`${this.baseUrl}/.well-known/mcp`);
+  }
+  /**
+   * Get the A2A (Agent-to-Agent) agent card
+   * @returns {Promise<AgentCard>}
+   */
+  async agentCard() {
+    return fetchWithError(`${this.baseUrl}/.well-known/agent-card.json`);
+  }
+  /**
    * Get asset metadata
    * @returns {Promise<AssetMetadata>}
    */
   async getMetadata(assetId) {
-    return await fetchWithError(`${this.baseUrl}/api/v1/assets/${assetId}`);
+    try {
+      return await fetchWithError(`${this.baseUrl}/api/v1/assets/${assetId}`);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
   }
   /**
   * Upload content to asset
@@ -374,20 +640,34 @@ var Venue = class _Venue {
   * @returns {Promise<ReadableStream<Uint8Array> | null>}
   */
   async uploadContent(assetId, content) {
-    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
-      method: "PUT",
-      headers: this.setCredentialsInHeader(),
-      body: content
-    });
-    return response.body;
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
+        method: "PUT",
+        headers: this.setCredentialsInHeader(),
+        body: content
+      });
+      return response.body;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
   }
   /**
    * Get asset content
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
   async getContent(assetId) {
-    const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`);
-    return response.body;
+    try {
+      const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`);
+      return response.body;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw new AssetNotFoundError(assetId);
+      }
+      throw error;
+    }
   }
   /**
      * Execute the operation
@@ -431,6 +711,18 @@ var Venue = class _Venue {
       throw error;
     }
   }
+  /** Alias for createAsset — matches Python SDK naming */
+  async register(assetData) {
+    return this.createAsset(assetData);
+  }
+  /** Alias for getStats — matches Python SDK naming */
+  status() {
+    return this.getStats();
+  }
+  /** Alias for uploadContent — matches Python SDK naming */
+  async putContent(assetId, content) {
+    return this.uploadContent(assetId, content);
+  }
   setCredentialsInHeader() {
     if (this.credentials.userId && this.credentials.userId != "") {
       return {
@@ -460,4 +752,4 @@ var Grid = class {
   }
 };
 
-export { Asset, CoviaError, CredentialsHTTP, DataAsset, Grid, Job, Operation, RunStatus, Venue, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused };
+export { Asset, AssetNotFoundError, CoviaConnectionError, CoviaError, CoviaTimeoutError, CredentialsHTTP, DataAsset, Grid, GridError, Job, JobFailedError, JobNotFoundError, JobStatus, NotFoundError, Operation, RunStatus, Venue, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };

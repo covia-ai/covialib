@@ -1,7 +1,8 @@
 // Export all types and enums
 export * from './types';
 export * from './Credentials'
-export * from './Utils'; 
+export * from './Utils';
+export { logger } from './Logger';
 
 // Export all classes
 export { Grid } from './Grid';
