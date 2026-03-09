@@ -71,11 +71,11 @@ declare abstract class Asset {
      */
     readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void>;
     /**
-     * Upload content to asset
+     * Put content to asset
      * @param content - Content to upload
      * @returns {Promise<ReadableStream<Uint8Array> | null>}
      */
-    uploadContent(content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
+    putContent(content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     /**
      * Get asset content
      * @returns {Promise<ReadableStream<Uint8Array> | null>}
@@ -126,11 +126,11 @@ declare class Venue implements VenueInterface {
      */
     static connect(venueId: string | Venue, credentials?: CredentialsHTTP): Promise<Venue>;
     /**
-     * Create a new asset
+     * Register a new asset
      * @param assetData - Asset configuration
      * @returns {Promise<Asset>}
      */
-    createAsset(assetData: any): Promise<Asset>;
+    register(assetData: any): Promise<Asset>;
     /**
      * Read stream from asset
      * @param reader - ReadableStreamDefaultReader
@@ -149,15 +149,10 @@ declare class Venue implements VenueInterface {
      */
     listAssets(options?: AssetListOptions): Promise<AssetList>;
     /**
-     * Get all assets
-     * @returns {Promise<Asset[]>}
-     */
-    getAssets(): Promise<Asset[]>;
-    /**
-     * Get all jobs
+     * List all jobs
      * @returns {Promise<string[]>}
      */
-    getJobs(): Promise<string[]>;
+    listJobs(): Promise<string[]>;
     /**
      * Get job by ID
      * @param jobId - Job identifier
@@ -177,10 +172,10 @@ declare class Venue implements VenueInterface {
     */
     deleteJob(jobId: string): Promise<number>;
     /**
-   * Get the DID (Decentralized Identifier) for this venue
-   * @returns {string} DID in the format did:web:domain
-   */
-    getStats(): Promise<StatusData>;
+     * Get venue status
+     * @returns {Promise<StatusData>}
+     */
+    status(): Promise<StatusData>;
     /**
      * List all named operations available on this venue
      * @returns {Promise<OperationInfo[]>}
@@ -213,11 +208,11 @@ declare class Venue implements VenueInterface {
      */
     getMetadata(assetId: string): Promise<AssetMetadata>;
     /**
- * Upload content to asset
- * @param content - Content to upload
- * @returns {Promise<ReadableStream<Uint8Array> | null>}
- */
-    uploadContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
+     * Put content to asset
+     * @param content - Content to upload
+     * @returns {Promise<ReadableStream<Uint8Array> | null>}
+     */
+    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     /**
      * Get asset content
      * @returns {Promise<ReadableStream<Uint8Array> | null>}
@@ -235,12 +230,6 @@ declare class Venue implements VenueInterface {
     * @returns {Promise<Job>}
     */
     invoke(assetId: string, input: any): Promise<Job>;
-    /** Alias for createAsset — matches Python SDK naming */
-    register(assetData: any): Promise<Asset>;
-    /** Alias for getStats — matches Python SDK naming */
-    status(): Promise<StatusData>;
-    /** Alias for uploadContent — matches Python SDK naming */
-    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     private setCredentialsInHeader;
 }
 
@@ -261,15 +250,14 @@ interface VenueInterface {
     metadata: VenueData;
     cancelJob(jobId: string): Promise<number>;
     deleteJob(jobId: string): Promise<number>;
-    getStats(): Promise<StatusData>;
+    status(): Promise<StatusData>;
     getJob(jobId: string): Promise<Job>;
-    getJobs(): Promise<string[]>;
+    listJobs(): Promise<string[]>;
     getAsset(assetId: AssetID): Promise<Asset>;
-    createAsset(assetData: any, userEmail: string): Promise<Asset>;
-    getAssets(): Promise<Asset[]>;
+    register(assetData: any): Promise<Asset>;
     getMetadata(assetId: string): Promise<AssetMetadata>;
     readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void>;
-    uploadContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
+    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
     getContent(assetId: string): Promise<ReadableStream<Uint8Array> | null>;
     run(assetId: string, input: any): Promise<any>;
     invoke(assetId: string, input: any): Promise<Job>;
@@ -279,12 +267,6 @@ interface VenueInterface {
     didDocument(): Promise<DIDDocument>;
     mcpDiscovery(): Promise<MCPDiscovery>;
     agentCard(): Promise<AgentCard>;
-    /** Alias for createAsset — matches Python SDK naming */
-    register(assetData: any): Promise<Asset>;
-    /** Alias for getStats — matches Python SDK naming */
-    status(): Promise<StatusData>;
-    /** Alias for uploadContent — matches Python SDK naming */
-    putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
 }
 type AssetID = string;
 interface AssetMetadata {

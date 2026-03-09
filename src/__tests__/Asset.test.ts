@@ -10,16 +10,15 @@ function createMockVenue(overrides: Partial<VenueInterface> = {}): VenueInterfac
     metadata: { name: 'Test Venue' },
     cancelJob: jest.fn(),
     deleteJob: jest.fn(),
-    getStats: jest.fn(),
+    status: jest.fn(),
     getJob: jest.fn(),
-    getJobs: jest.fn(),
+    listJobs: jest.fn(),
     getAsset: jest.fn(),
-    createAsset: jest.fn(),
-    getAssets: jest.fn(),
+    register: jest.fn(),
     listAssets: jest.fn().mockResolvedValue({ items: [], total: 0, offset: 0, limit: 100 }),
     getMetadata: jest.fn().mockResolvedValue({ name: 'Test Asset', type: 'data' }),
     readStream: jest.fn(),
-    uploadContent: jest.fn().mockResolvedValue(null),
+    putContent: jest.fn().mockResolvedValue(null),
     getContent: jest.fn().mockResolvedValue(null),
     run: jest.fn().mockResolvedValue({ result: 42 }),
     invoke: jest.fn().mockResolvedValue(new Job('j1', {} as VenueInterface, { status: RunStatus.COMPLETE })),
@@ -28,9 +27,6 @@ function createMockVenue(overrides: Partial<VenueInterface> = {}): VenueInterfac
     didDocument: jest.fn().mockResolvedValue({ id: 'did:web:venue.example.com' }),
     mcpDiscovery: jest.fn().mockResolvedValue({}),
     agentCard: jest.fn().mockResolvedValue({}),
-    register: jest.fn(),
-    status: jest.fn(),
-    putContent: jest.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
@@ -62,14 +58,14 @@ describe('Asset (via Operation subclass)', () => {
     });
   });
 
-  describe('uploadContent', () => {
-    it('delegates to venue.uploadContent with asset id', async () => {
+  describe('putContent', () => {
+    it('delegates to venue.putContent with asset id', async () => {
       const venue = createMockVenue();
       const asset = new DataAsset('asset-1', venue);
       const content = new Blob(['data']);
 
-      await asset.uploadContent(content);
-      expect(venue.uploadContent).toHaveBeenCalledWith('asset-1', content);
+      await asset.putContent(content);
+      expect(venue.putContent).toHaveBeenCalledWith('asset-1', content);
     });
   });
 

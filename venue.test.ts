@@ -27,10 +27,10 @@ test('GridConnectCheckName', () => {
 
   })
 });
-test('venueHasAssets', () => { 
-    venue.getAssets().then((assets) => {
-      expect(assets).toBeInstanceOf(Array);
-      expect(assets.length).toBeGreaterThan(Number(process.env.MIN_ASSETS_VENUE));
+test('venueHasAssets', () => {
+    venue.listAssets().then((assetList) => {
+      expect(assetList.items).toBeInstanceOf(Array);
+      expect(assetList.items.length).toBeGreaterThan(Number(process.env.MIN_ASSETS_VENUE));
     })
 });
 test('venueHasAssetId', () => {
@@ -70,10 +70,10 @@ test('venueDataAsset', () => {
                      "contentType" : contentType, 
                   }
          }
-         venue.createAsset(metadata).then((asset) => {
+         venue.register(metadata).then((asset) => {
             expect(asset.id).not.toBeNull();
             const content = new Blob([contentData], { type: contentType });
-            asset.uploadContent(content).then((response)=> {      
+            asset.putContent(content).then((response)=> {      
                  expect(response).toBeInstanceOf(ReadableStream)
                  asset.getContent().then((response) => {
                    response?.getReader().read().then(({done,value}) => {
@@ -129,7 +129,7 @@ test('venueInvokeOpAndCancel', () => {
     })
 });
 test('venueStatus', () => {
-   venue.getStats().then((stats:StatusData) => {
+   venue.status().then((stats:StatusData) => {
       expect(stats?.status).toBe("OK");
       expect(stats?.url).toBe(process.env.VENUE_URL);
       expect(stats?.did).toBe(process.env.VENUE_HOST);
@@ -147,8 +147,8 @@ test('isJobFinsihedMethod', () => {
    expect(isJobFinished(RunStatus.STARTED)).toBe(false)
    expect(isJobFinished(RunStatus.AUTH_REQUIRED)).toBe(false)
 })
-test('getJobs', () => {
-venue.getJobs().then((jobs => {
+test('listJobs', () => {
+venue.listJobs().then((jobs => {
       expect(jobs.length).toBeGreaterThan(0);
       venue.getJob(jobs[0]).then((job:Job) => {
          expect(job.id).not.toBeNull();

@@ -89,11 +89,11 @@ export class Venue implements VenueInterface {
   }
 
   /**
-   * Create a new asset
+   * Register a new asset
    * @param assetData - Asset configuration
    * @returns {Promise<Asset>}
    */
-  async createAsset(assetData: any): Promise<Asset> {
+  async register(assetData: any): Promise<Asset> {
     return fetchWithError<any>(`${this.baseUrl}/api/v1/assets/`, {
       method: 'POST',
       headers: this.setCredentialsInHeader(),
@@ -160,24 +160,12 @@ export class Venue implements VenueInterface {
     return fetchWithError<AssetList>(`${this.baseUrl}/api/v1/assets/?${params.toString()}`);
   }
 
-  /**
-   * Get all assets
-   * @returns {Promise<Asset[]>}
-   */
-  getAssets(): Promise<Asset[]> {
-    return fetchWithError<any>(`${this.baseUrl}/api/v1/assets/`)
-      .then(assetIds => {
-        // Fetch all assets in parallel
-        const assetPromises = assetIds.items.map((assetId: AssetID) => this.getAsset(assetId));
-        return Promise.all(assetPromises);
-      });
-  }
 
   /**
-   * Get all jobs
+   * List all jobs
    * @returns {Promise<string[]>}
    */
-  async getJobs(): Promise<string[]> {
+  async listJobs(): Promise<string[]> {
     return fetchWithError<string[]>(`${this.baseUrl}/api/v1/jobs`);
   }
 
@@ -233,11 +221,11 @@ export class Venue implements VenueInterface {
   }
 
 
-    /**
-   * Get the DID (Decentralized Identifier) for this venue
-   * @returns {string} DID in the format did:web:domain
+  /**
+   * Get venue status
+   * @returns {Promise<StatusData>}
    */
-  getStats():Promise<StatusData> {
+  status():Promise<StatusData> {
       return fetchWithError<StatusData>(`${this.baseUrl}/api/v1/status`);
   }
 
@@ -298,12 +286,12 @@ export class Venue implements VenueInterface {
       }
     }
 
-      /**
-   * Upload content to asset
+  /**
+   * Put content to asset
    * @param content - Content to upload
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
-  async uploadContent(assetId:string, content: BodyInit ): Promise<ReadableStream<Uint8Array> | null> {
+  async putContent(assetId:string, content: BodyInit ): Promise<ReadableStream<Uint8Array> | null> {
     try {
       const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
         method: 'PUT',
@@ -378,21 +366,6 @@ export class Venue implements VenueInterface {
       } catch (error) {
         throw error;
       }
-    }
-
-    /** Alias for createAsset — matches Python SDK naming */
-    async register(assetData: any): Promise<Asset> {
-      return this.createAsset(assetData);
-    }
-
-    /** Alias for getStats — matches Python SDK naming */
-    status(): Promise<StatusData> {
-      return this.getStats();
-    }
-
-    /** Alias for uploadContent — matches Python SDK naming */
-    async putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null> {
-      return this.uploadContent(assetId, content);
     }
 
     private setCredentialsInHeader() : any{  

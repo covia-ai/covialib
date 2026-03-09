@@ -24,15 +24,14 @@ export interface VenueInterface {
   
   cancelJob(jobId:string):Promise<number>;
   deleteJob(jobId:string):Promise<number>;
-  getStats():Promise<StatusData>;
+  status():Promise<StatusData>;
   getJob(jobId:string):Promise<Job>;
-  getJobs():Promise<string[]>;
+  listJobs():Promise<string[]>;
   getAsset(assetId: AssetID): Promise<Asset>;
-  createAsset(assetData: any, userEmail: string): Promise<Asset>;
-  getAssets(): Promise<Asset[]>;
+  register(assetData: any): Promise<Asset>;
   getMetadata(assetId:string): Promise<AssetMetadata>;
   readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> ;
-  uploadContent(assetId:string, content:BodyInit):Promise<ReadableStream<Uint8Array> | null>;
+  putContent(assetId:string, content:BodyInit):Promise<ReadableStream<Uint8Array> | null>;
   getContent(assetId:string):Promise<ReadableStream<Uint8Array> | null>;
   run(assetId:string, input:any):Promise<any>;
   invoke(assetId:string, input:any):Promise<Job>;
@@ -42,12 +41,6 @@ export interface VenueInterface {
   didDocument(): Promise<DIDDocument>;
   mcpDiscovery(): Promise<MCPDiscovery>;
   agentCard(): Promise<AgentCard>;
-  /** Alias for createAsset — matches Python SDK naming */
-  register(assetData: any): Promise<Asset>;
-  /** Alias for getStats — matches Python SDK naming */
-  status(): Promise<StatusData>;
-  /** Alias for uploadContent — matches Python SDK naming */
-  putContent(assetId: string, content: BodyInit): Promise<ReadableStream<Uint8Array> | null>;
 
 }
 

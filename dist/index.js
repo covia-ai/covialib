@@ -236,12 +236,12 @@ var Asset = class {
     return this.readStream(reader);
   }
   /**
-   * Upload content to asset
+   * Put content to asset
    * @param content - Content to upload
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
-  uploadContent(content) {
-    return this.venue.uploadContent(this.id, content);
+  putContent(content) {
+    return this.venue.putContent(this.id, content);
   }
   /**
    * Get asset content
@@ -447,11 +447,11 @@ var Venue = class _Venue {
     throw new CoviaError("Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.");
   }
   /**
-   * Create a new asset
+   * Register a new asset
    * @param assetData - Asset configuration
    * @returns {Promise<Asset>}
    */
-  async createAsset(assetData) {
+  async register(assetData) {
     return fetchWithError(`${this.baseUrl}/api/v1/assets/`, {
       method: "POST",
       headers: this.setCredentialsInHeader(),
@@ -515,20 +515,10 @@ var Venue = class _Venue {
     return fetchWithError(`${this.baseUrl}/api/v1/assets/?${params.toString()}`);
   }
   /**
-   * Get all assets
-   * @returns {Promise<Asset[]>}
-   */
-  getAssets() {
-    return fetchWithError(`${this.baseUrl}/api/v1/assets/`).then((assetIds) => {
-      const assetPromises = assetIds.items.map((assetId) => this.getAsset(assetId));
-      return Promise.all(assetPromises);
-    });
-  }
-  /**
-   * Get all jobs
+   * List all jobs
    * @returns {Promise<string[]>}
    */
-  async getJobs() {
+  async listJobs() {
     return fetchWithError(`${this.baseUrl}/api/v1/jobs`);
   }
   /**
@@ -580,10 +570,10 @@ var Venue = class _Venue {
     }
   }
   /**
-  * Get the DID (Decentralized Identifier) for this venue
-  * @returns {string} DID in the format did:web:domain
-  */
-  getStats() {
+   * Get venue status
+   * @returns {Promise<StatusData>}
+   */
+  status() {
     return fetchWithError(`${this.baseUrl}/api/v1/status`);
   }
   /**
@@ -637,11 +627,11 @@ var Venue = class _Venue {
     }
   }
   /**
-  * Upload content to asset
-  * @param content - Content to upload
-  * @returns {Promise<ReadableStream<Uint8Array> | null>}
-  */
-  async uploadContent(assetId, content) {
+   * Put content to asset
+   * @param content - Content to upload
+   * @returns {Promise<ReadableStream<Uint8Array> | null>}
+   */
+  async putContent(assetId, content) {
     try {
       const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
         method: "PUT",
@@ -712,18 +702,6 @@ var Venue = class _Venue {
     } catch (error) {
       throw error;
     }
-  }
-  /** Alias for createAsset — matches Python SDK naming */
-  async register(assetData) {
-    return this.createAsset(assetData);
-  }
-  /** Alias for getStats — matches Python SDK naming */
-  status() {
-    return this.getStats();
-  }
-  /** Alias for uploadContent — matches Python SDK naming */
-  async putContent(assetId, content) {
-    return this.uploadContent(assetId, content);
   }
   setCredentialsInHeader() {
     if (this.credentials.userId && this.credentials.userId != "") {

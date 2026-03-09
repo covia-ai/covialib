@@ -42,12 +42,12 @@ export abstract class Asset {
   }
 
   /**
-   * Upload content to asset
+   * Put content to asset
    * @param content - Content to upload
    * @returns {Promise<ReadableStream<Uint8Array> | null>}
    */
-  uploadContent(content: BodyInit): Promise<ReadableStream<Uint8Array> | null> {
-    return this.venue.uploadContent(this.id, content);
+  putContent(content: BodyInit): Promise<ReadableStream<Uint8Array> | null> {
+    return this.venue.putContent(this.id, content);
   }
 
   /**

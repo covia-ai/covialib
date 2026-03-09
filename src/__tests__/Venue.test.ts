@@ -200,7 +200,7 @@ describe('Venue.getAsset', () => {
   });
 });
 
-describe('Venue.createAsset', () => {
+describe('Venue.register', () => {
   let venue: Venue;
 
   beforeEach(() => {
@@ -208,13 +208,13 @@ describe('Venue.createAsset', () => {
     venue = new Venue({ baseUrl: 'https://test.com', venueId: 'did:web:test.com' });
   });
 
-  it('creates asset via POST and returns it', async () => {
-    // First fetch: createAsset POST returns asset ID
+  it('registers asset via POST and returns it', async () => {
+    // First fetch: register POST returns asset ID
     mockFetchSuccess('new-asset-id');
     // Second fetch: getAsset fetches the created asset
     mockFetchSuccess({ metadata: { name: 'New Asset' } });
 
-    const asset = await venue.createAsset({ name: 'New Asset' });
+    const asset = await venue.register({ name: 'New Asset' });
     expect(asset).toBeInstanceOf(DataAsset);
 
     // Verify POST was called
@@ -223,7 +223,7 @@ describe('Venue.createAsset', () => {
   });
 });
 
-describe('Venue.getJobs and getJob', () => {
+describe('Venue.listJobs and getJob', () => {
   let venue: Venue;
 
   beforeEach(() => {
@@ -231,10 +231,10 @@ describe('Venue.getJobs and getJob', () => {
     venue = new Venue({ baseUrl: 'https://test.com', venueId: 'did:web:test.com' });
   });
 
-  it('getJobs returns array of job IDs', async () => {
+  it('listJobs returns array of job IDs', async () => {
     mockFetchSuccess(['job-1', 'job-2', 'job-3']);
 
-    const jobs = await venue.getJobs();
+    const jobs = await venue.listJobs();
     expect(jobs).toEqual(['job-1', 'job-2', 'job-3']);
   });
 
@@ -301,14 +301,14 @@ describe('Venue.cancelJob and deleteJob', () => {
   });
 });
 
-describe('Venue.getStats', () => {
+describe('Venue.status', () => {
   it('returns status data', async () => {
     mockFetch.mockReset();
     const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'did:web:test.com' });
     const statusData = { status: 'OK', url: 'https://test.com', did: 'did:web:test.com' };
     mockFetchSuccess(statusData);
 
-    const stats = await venue.getStats();
+    const stats = await venue.status();
     expect(stats.status).toBe('OK');
     expect(stats.url).toBe('https://test.com');
   });
@@ -386,25 +386,20 @@ describe('Venue credential headers', () => {
   });
 });
 
-describe('Venue.getAssets', () => {
-  it('fetches all assets and returns array', async () => {
+describe('Venue.listAssets', () => {
+  it('returns paginated asset list', async () => {
     mockFetch.mockReset();
     const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'did:web:test.com' });
 
-    // First call: getAssets listing
-    mockFetchSuccess({ items: ['a1', 'a2'] });
-    // Second + third calls: individual asset fetches
-    mockFetchSuccess({ metadata: { name: 'Asset 1', operation: { adapter: 'x' } } });
-    mockFetchSuccess({ metadata: { name: 'Asset 2' } });
+    mockFetchSuccess({ items: ['a1', 'a2'], total: 2, offset: 0, limit: 100 });
 
-    const assets = await venue.getAssets();
-    expect(assets).toHaveLength(2);
-    expect(assets[0]).toBeInstanceOf(Operation);
-    expect(assets[1]).toBeInstanceOf(DataAsset);
+    const result = await venue.listAssets();
+    expect(result.items).toEqual(['a1', 'a2']);
+    expect(result.total).toBe(2);
   });
 });
 
-describe('Venue.uploadContent and getContent', () => {
+describe('Venue.putContent and getContent', () => {
   let venue: Venue;
 
   beforeEach(() => {
@@ -416,10 +411,10 @@ describe('Venue.uploadContent and getContent', () => {
     });
   });
 
-  it('uploadContent sends PUT with content', async () => {
+  it('putContent sends PUT with content', async () => {
     mockFetchStreamSuccess(200);
 
-    await venue.uploadContent('asset-1', 'file-data');
+    await venue.putContent('asset-1', 'file-data');
     expect(mockFetch.mock.calls[0][0]).toBe('https://test.com/api/v1/assets/asset-1/content');
     expect(mockFetch.mock.calls[0][1]?.method).toBe('PUT');
   });
@@ -431,9 +426,9 @@ describe('Venue.uploadContent and getContent', () => {
     expect(mockFetch.mock.calls[0][0]).toBe('https://test.com/api/v1/assets/asset-1/content');
   });
 
-  it('uploadContent throws AssetNotFoundError on 404', async () => {
+  it('putContent throws AssetNotFoundError on 404', async () => {
     mockFetchError(404);
-    await expect(venue.uploadContent('missing', 'data')).rejects.toThrow(AssetNotFoundError);
+    await expect(venue.putContent('missing', 'data')).rejects.toThrow(AssetNotFoundError);
   });
 
   it('getContent throws AssetNotFoundError on 404', async () => {

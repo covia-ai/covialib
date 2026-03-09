@@ -8,9 +8,9 @@ async function example() {
     // Create a venue connection
     const venue  =  await Grid.connect('did:web:venue-test.covia.ai')
     
-    // Get all assets
-    const assets = await venue.getAssets();
-    console.log('Found assets:', assets.length);
+    // List all assets
+    const assets = await venue.listAssets();
+    console.log('Found assets:', assets.items.length);
 
     // Get a specific asset
     const asset = await venue.getAsset('asset-id');
@@ -34,7 +34,7 @@ async function example() {
 
     // Upload content to data asset
     const content = new Blob(['Hello World'], { type: 'text/plain' });
-    await dataAsset.uploadContent(content);
+    await dataAsset.putContent(content);
 
     // Get content from data asset
     const stream = await dataAsset.getContent();
@@ -43,8 +43,8 @@ async function example() {
       await dataAsset.readStream(reader);
     }
 
-    // Get all jobs
-    const jobs = await venue.getJobs();
+    // List all jobs
+    const jobs = await venue.listJobs();
     console.log('Jobs:', jobs);
 
     // Get a specific job
