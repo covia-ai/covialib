@@ -1,5 +1,5 @@
 import { Asset } from "./Asset";
-import { Credentials, CredentialsHTTP } from "./Credentials";
+import { Auth } from "./Credentials";
 import { Job } from "./Job";
 import { Venue } from "./Venue";
 
@@ -8,13 +8,13 @@ export interface VenueOptions {
   venueId?: string;
   name?:string;
   description?:string;
-  credentials?:Credentials;
+  auth?:Auth;
 }
 
 // Venue Constructor interface (for static members)
 export interface VenueConstructor {
   new(): VenueInterface;
-  connect(venueId: string | Venue, credentials?: CredentialsHTTP):Promise<Venue>;
+  connect(venueId: string | Venue, auth?: Auth):Promise<Venue>;
 }
 
 export interface VenueInterface {

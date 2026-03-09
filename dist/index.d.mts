@@ -100,11 +100,63 @@ declare abstract class Asset {
     invoke(input: any): Promise<Job>;
 }
 
+/**
+ * Abstract base class for authentication strategies.
+ * Subclass this to implement custom authentication.
+ *
+ * Example — custom API-key auth:
+ *
+ *   class ApiKeyAuth extends Auth {
+ *     constructor(private key: string) { super(); }
+ *     apply(headers: Record<string, string>): void {
+ *       headers["X-Api-Key"] = this.key;
+ *     }
+ *   }
+ */
+declare abstract class Auth {
+    /** Apply authentication credentials to request headers (mutates in place). */
+    abstract apply(headers: Record<string, string>): void;
+}
+/** No-op authentication provider. Sends no credentials. */
+declare class NoAuth extends Auth {
+    apply(_headers: Record<string, string>): void;
+}
+/**
+ * Bearer token authentication.
+ * Adds `Authorization: Bearer <token>` to every request.
+ *
+ * Example:
+ *   const venue = await Grid.connect("https://venue.covia.ai", new BearerAuth("my-token"));
+ */
+declare class BearerAuth extends Auth {
+    private _token;
+    constructor(token: string);
+    apply(headers: Record<string, string>): void;
+}
+/**
+ * HTTP Basic authentication.
+ * Adds `Authorization: Basic <base64(username:password)>` to every request.
+ */
+declare class BasicAuth extends Auth {
+    private _encoded;
+    constructor(username: string, password: string);
+    apply(headers: Record<string, string>): void;
+}
+/**
+ * Custom auth that sets the X-Covia-User header for user identity tracking.
+ */
+declare class CoviaUserAuth extends Auth {
+    private _userId;
+    constructor(userId: string);
+    apply(headers: Record<string, string>): void;
+}
+/** @deprecated Use Auth subclasses instead (NoAuth, BearerAuth, BasicAuth, CoviaUserAuth). */
 interface Credentials {
     venueId: string;
     apiKey: string;
     userId: string;
 }
+/** @deprecated Use Auth subclasses instead (NoAuth, BearerAuth, BasicAuth, CoviaUserAuth). */
 declare class CredentialsHTTP implements Credentials {
     venueId: string;
     apiKey: string;
@@ -115,7 +167,7 @@ declare class CredentialsHTTP implements Credentials {
 declare class Venue implements VenueInterface {
     baseUrl: string;
     venueId: string;
-    credentials: Credentials;
+    auth: Auth;
     metadata: VenueData;
     constructor(options?: VenueOptions);
     /**
@@ -124,7 +176,7 @@ declare class Venue implements VenueInterface {
      * @param credentials - Optional credentials for venue authentication
      * @returns {Promise<Venue>} A new Venue instance configured appropriately
      */
-    static connect(venueId: string | Venue, credentials?: CredentialsHTTP): Promise<Venue>;
+    static connect(venueId: string | Venue, auth?: Auth): Promise<Venue>;
     /**
      * Register a new asset
      * @param assetData - Asset configuration
@@ -230,7 +282,7 @@ declare class Venue implements VenueInterface {
     * @returns {Promise<Job>}
     */
     invoke(assetId: string, input: any): Promise<Job>;
-    private setCredentialsInHeader;
+    private _buildHeaders;
 }
 
 interface VenueOptions {
@@ -238,11 +290,11 @@ interface VenueOptions {
     venueId?: string;
     name?: string;
     description?: string;
-    credentials?: Credentials;
+    auth?: Auth;
 }
 interface VenueConstructor {
     new (): VenueInterface;
-    connect(venueId: string | Venue, credentials?: CredentialsHTTP): Promise<Venue>;
+    connect(venueId: string | Venue, auth?: Auth): Promise<Venue>;
 }
 interface VenueInterface {
     baseUrl: string;
@@ -491,9 +543,10 @@ declare class Grid {
     /**
     * Static method to connect to a venue
     * @param venueId - Can be a HTTP base URL, DNS name, or existing Venue instance
+    * @param auth - Optional authentication provider (BearerAuth, BasicAuth, etc.)
     * @returns {Promise<Venue>} A new Venue instance configured appropriately
     */
-    static connect(venueId: string, credentials?: CredentialsHTTP): Promise<Venue>;
+    static connect(venueId: string, auth?: Auth): Promise<Venue>;
 }
 
 declare class Operation extends Asset {
@@ -504,4 +557,4 @@ declare class DataAsset extends Asset {
     constructor(id: AssetID, venue: VenueInterface, metadata?: AssetMetadata);
 }
 
-export { type AgentCard, Asset, type AssetID, type AssetList, type AssetListOptions, type AssetMetadata, AssetNotFoundError, type ContentDetails, CoviaConnectionError, CoviaError, CoviaTimeoutError, type Credentials, CredentialsHTTP, type DIDDocument, DataAsset, Grid, GridError, type InvokePayload, Job, JobFailedError, type JobMetadata, JobNotFoundError, JobStatus, type MCPDiscovery, NotFoundError, Operation, type OperationDetails, type OperationInfo, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueData, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };
+export { type AgentCard, Asset, type AssetID, type AssetList, type AssetListOptions, type AssetMetadata, AssetNotFoundError, Auth, BasicAuth, BearerAuth, type ContentDetails, CoviaConnectionError, CoviaError, CoviaTimeoutError, CoviaUserAuth, type Credentials, CredentialsHTTP, type DIDDocument, DataAsset, Grid, GridError, type InvokePayload, Job, JobFailedError, type JobMetadata, JobNotFoundError, JobStatus, type MCPDiscovery, NoAuth, NotFoundError, Operation, type OperationDetails, type OperationInfo, type OperationPayload, RunStatus, type StatsData, type StatusData, Venue, type VenueConstructor, type VenueData, type VenueInterface, type VenueOptions, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };

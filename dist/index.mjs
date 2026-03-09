@@ -79,6 +79,41 @@ var JobNotFoundError = class extends NotFoundError {
 };
 
 // src/Credentials.ts
+var Auth = class {
+};
+var NoAuth = class extends Auth {
+  apply(_headers) {
+  }
+};
+var BearerAuth = class extends Auth {
+  constructor(token) {
+    super();
+    this._token = token;
+  }
+  apply(headers) {
+    headers["Authorization"] = `Bearer ${this._token}`;
+  }
+};
+var BasicAuth = class extends Auth {
+  constructor(username, password) {
+    super();
+    this._encoded = btoa(`${username}:${password}`);
+  }
+  apply(headers) {
+    headers["Authorization"] = `Basic ${this._encoded}`;
+  }
+};
+var CoviaUserAuth = class extends Auth {
+  constructor(userId) {
+    super();
+    this._userId = userId;
+  }
+  apply(headers) {
+    if (this._userId && this._userId !== "") {
+      headers["X-Covia-User"] = this._userId;
+    }
+  }
+};
 var CredentialsHTTP = class {
   constructor(venueId, apiKey, userId) {
     this.venueId = venueId;
@@ -394,7 +429,7 @@ var Venue = class _Venue {
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || "";
     this.venueId = options.venueId || "";
-    this.credentials = options.credentials || new CredentialsHTTP(this.venueId, "", "");
+    this.auth = options.auth || new NoAuth();
     this.metadata = {
       name: options.name || "default",
       description: options.description || ""
@@ -406,13 +441,13 @@ var Venue = class _Venue {
    * @param credentials - Optional credentials for venue authentication
    * @returns {Promise<Venue>} A new Venue instance configured appropriately
    */
-  static async connect(venueId, credentials) {
+  static async connect(venueId, auth) {
     if (venueId instanceof _Venue) {
       return new _Venue({
         baseUrl: venueId.baseUrl,
         venueId: venueId.venueId,
         name: venueId.metadata.name,
-        credentials
+        auth
       });
     }
     if (typeof venueId === "string") {
@@ -439,7 +474,7 @@ var Venue = class _Venue {
         baseUrl,
         venueId: data.did,
         name: data.name,
-        credentials
+        auth
       });
     }
     throw new CoviaError("Invalid venue ID parameter. Must be a string (URL/DNS) or Venue instance.");
@@ -452,7 +487,7 @@ var Venue = class _Venue {
   async register(assetData) {
     return fetchWithError(`${this.baseUrl}/api/v1/assets/`, {
       method: "POST",
-      headers: this.setCredentialsInHeader(),
+      headers: this._buildHeaders(),
       body: JSON.stringify(assetData)
     }).then((response) => {
       return this.getAsset(response);
@@ -633,7 +668,7 @@ var Venue = class _Venue {
     try {
       const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
         method: "PUT",
-        headers: this.setCredentialsInHeader(),
+        headers: this._buildHeaders(),
         body: content
       });
       return response.body;
@@ -672,7 +707,7 @@ var Venue = class _Venue {
     try {
       const response = await fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
         method: "POST",
-        headers: this.setCredentialsInHeader(),
+        headers: this._buildHeaders(),
         body: JSON.stringify(payload)
       });
       return response?.output;
@@ -693,7 +728,7 @@ var Venue = class _Venue {
     try {
       const response = await fetchWithError(`${this.baseUrl}/api/v1/invoke/`, {
         method: "POST",
-        headers: this.setCredentialsInHeader(),
+        headers: this._buildHeaders(),
         body: JSON.stringify(payload)
       });
       return new Job(response?.id, this, response);
@@ -701,15 +736,10 @@ var Venue = class _Venue {
       throw error;
     }
   }
-  setCredentialsInHeader() {
-    if (this.credentials.userId && this.credentials.userId != "") {
-      return {
-        "Content-Type": "application/json",
-        "X-Covia-User": this.credentials.userId
-      };
-    } else {
-      return { "Content-Type": "application/json" };
-    }
+  _buildHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    this.auth.apply(headers);
+    return headers;
   }
 };
 
@@ -719,15 +749,16 @@ var Grid = class {
   /**
   * Static method to connect to a venue
   * @param venueId - Can be a HTTP base URL, DNS name, or existing Venue instance
+  * @param auth - Optional authentication provider (BearerAuth, BasicAuth, etc.)
   * @returns {Promise<Venue>} A new Venue instance configured appropriately
   */
-  static async connect(venueId, credentials) {
+  static async connect(venueId, auth) {
     if (cache3.has(venueId))
       return Promise.resolve(cache3.get(venueId));
-    const connectedVenue = await Venue.connect(venueId, credentials);
+    const connectedVenue = await Venue.connect(venueId, auth);
     cache3.set(venueId, connectedVenue);
     return Promise.resolve(connectedVenue);
   }
 };
 
-export { Asset, AssetNotFoundError, CoviaConnectionError, CoviaError, CoviaTimeoutError, CredentialsHTTP, DataAsset, Grid, GridError, Job, JobFailedError, JobNotFoundError, JobStatus, NotFoundError, Operation, RunStatus, Venue, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };
+export { Asset, AssetNotFoundError, Auth, BasicAuth, BearerAuth, CoviaConnectionError, CoviaError, CoviaTimeoutError, CoviaUserAuth, CredentialsHTTP, DataAsset, Grid, GridError, Job, JobFailedError, JobNotFoundError, JobStatus, NoAuth, NotFoundError, Operation, RunStatus, Venue, fetchStreamWithError, fetchWithError, getAssetIdFromPath, getAssetIdFromVenueId, getParsedAssetId, isJobComplete, isJobFinished, isJobPaused, logger };

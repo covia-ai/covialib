@@ -1,6 +1,6 @@
 import { Venue } from '../Venue';
 import { CoviaError, RunStatus, AssetNotFoundError, JobNotFoundError, NotFoundError, GridError } from '../types';
-import { CredentialsHTTP } from '../Credentials';
+import { CoviaUserAuth, BearerAuth, NoAuth } from '../Credentials';
 import { Operation } from '../Operation';
 import { DataAsset } from '../DataAsset';
 import { Job } from '../Job';
@@ -75,16 +75,15 @@ describe('Venue constructor', () => {
     expect(venue.metadata.description).toBe('A test venue');
   });
 
-  it('uses default credentials when none provided', () => {
+  it('uses NoAuth by default when no auth provided', () => {
     const venue = new Venue({ venueId: 'did:web:test.com' });
-    expect(venue.credentials).toBeDefined();
-    expect(venue.credentials.venueId).toBe('did:web:test.com');
+    expect(venue.auth).toBeInstanceOf(NoAuth);
   });
 
-  it('uses provided credentials', () => {
-    const creds = new CredentialsHTTP('v', 'k', 'user@test.com');
-    const venue = new Venue({ credentials: creds });
-    expect(venue.credentials.userId).toBe('user@test.com');
+  it('uses provided auth', () => {
+    const auth = new CoviaUserAuth('user@test.com');
+    const venue = new Venue({ auth });
+    expect(venue.auth).toBeInstanceOf(CoviaUserAuth);
   });
 });
 
@@ -138,12 +137,12 @@ describe('Venue.connect', () => {
     expect(cloned.metadata.name).toBe('Original');
   });
 
-  it('passes credentials when connecting with Venue instance', async () => {
+  it('passes auth when connecting with Venue instance', async () => {
     const original = new Venue({ baseUrl: 'https://x.com', venueId: 'v' });
-    const creds = new CredentialsHTTP('v', 'k', 'user');
+    const auth = new CoviaUserAuth('user');
 
-    const cloned = await Venue.connect(original, creds);
-    expect(cloned.credentials.userId).toBe('user');
+    const cloned = await Venue.connect(original, auth);
+    expect(cloned.auth).toBeInstanceOf(CoviaUserAuth);
   });
 
   it('throws CoviaError on fetch failure during connect', async () => {
@@ -357,14 +356,14 @@ describe('Venue.invoke and run', () => {
   });
 });
 
-describe('Venue credential headers', () => {
+describe('Venue auth headers', () => {
   beforeEach(() => {
     mockFetch.mockReset();
   });
 
-  it('includes X-Covia-User header when userId is set', async () => {
-    const creds = new CredentialsHTTP('v', 'k', 'user@test.com');
-    const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'v', credentials: creds });
+  it('includes X-Covia-User header when CoviaUserAuth is used', async () => {
+    const auth = new CoviaUserAuth('user@test.com');
+    const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'v', auth });
     mockFetchSuccess({ id: 'j1', status: 'COMPLETE' });
 
     await venue.invoke('op-1', {});
@@ -374,7 +373,19 @@ describe('Venue credential headers', () => {
     expect(headers['Content-Type']).toBe('application/json');
   });
 
-  it('omits X-Covia-User header when userId is empty', async () => {
+  it('includes Authorization header when BearerAuth is used', async () => {
+    const auth = new BearerAuth('my-token');
+    const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'v', auth });
+    mockFetchSuccess({ id: 'j1', status: 'COMPLETE' });
+
+    await venue.invoke('op-1', {});
+
+    const headers = mockFetch.mock.calls[0][1].headers;
+    expect(headers['Authorization']).toBe('Bearer my-token');
+    expect(headers['Content-Type']).toBe('application/json');
+  });
+
+  it('sends no auth headers when NoAuth is used', async () => {
     const venue = new Venue({ baseUrl: 'https://test.com', venueId: 'v' });
     mockFetchSuccess({ id: 'j1', status: 'COMPLETE' });
 
@@ -382,6 +393,7 @@ describe('Venue credential headers', () => {
 
     const headers = mockFetch.mock.calls[0][1].headers;
     expect(headers['X-Covia-User']).toBeUndefined();
+    expect(headers['Authorization']).toBeUndefined();
     expect(headers['Content-Type']).toBe('application/json');
   });
 });
@@ -407,7 +419,7 @@ describe('Venue.putContent and getContent', () => {
     venue = new Venue({
       baseUrl: 'https://test.com',
       venueId: 'did:web:test.com',
-      credentials: new CredentialsHTTP('v', 'k', 'user'),
+      auth: new CoviaUserAuth('user'),
     });
   });
 

@@ -3,7 +3,7 @@ import { Asset } from './Asset';
 import { Operation } from './Operation';
 import { DataAsset } from './DataAsset';
 import { fetchStreamWithError, fetchWithError, isJobComplete } from './Utils';
-import { Credentials, CredentialsHTTP } from './Credentials';
+import { Auth, NoAuth } from './Credentials';
 import { Resolver } from 'did-resolver'
 import { getResolver } from 'web-did-resolver'
 import { Job } from './Job';
@@ -17,7 +17,7 @@ const cache = new Map<AssetID, any>();
 export class Venue implements VenueInterface {
   public baseUrl: string;
   public venueId: string;
-  public credentials: Credentials;
+  public auth: Auth;
   public metadata: VenueData;
   
   constructor(options: VenueOptions = {}) {
@@ -25,7 +25,7 @@ export class Venue implements VenueInterface {
     
     this.baseUrl = options.baseUrl || '';
     this.venueId = options.venueId || '';
-    this.credentials  = options.credentials || new CredentialsHTTP(this.venueId,"","");
+    this.auth = options.auth || new NoAuth();
     this.metadata = {
         name: options.name || "default",
         description: options.description || ""
@@ -38,7 +38,7 @@ export class Venue implements VenueInterface {
    * @param credentials - Optional credentials for venue authentication
    * @returns {Promise<Venue>} A new Venue instance configured appropriately
    */
-  static async connect(venueId: string | Venue, credentials?: CredentialsHTTP): Promise<Venue> {
+  static async connect(venueId: string | Venue, auth?: Auth): Promise<Venue> {
 
     if (venueId instanceof Venue) {
       // If it's already a Venue instance, return a new instance with the same configuration
@@ -46,7 +46,7 @@ export class Venue implements VenueInterface {
         baseUrl: venueId.baseUrl,
         venueId: venueId.venueId,
         name: venueId.metadata.name,
-        credentials: credentials
+        auth: auth
       });
     }
 
@@ -80,7 +80,7 @@ export class Venue implements VenueInterface {
             baseUrl,
             venueId: data.did,
             name: data.name,
-            credentials: credentials
+            auth: auth
     });
       
     }
@@ -96,7 +96,7 @@ export class Venue implements VenueInterface {
   async register(assetData: any): Promise<Asset> {
     return fetchWithError<any>(`${this.baseUrl}/api/v1/assets/`, {
       method: 'POST',
-      headers: this.setCredentialsInHeader(),
+      headers: this._buildHeaders(),
       body: JSON.stringify(assetData),
     }).then(response=>{return this.getAsset(response)});
   }
@@ -295,7 +295,7 @@ export class Venue implements VenueInterface {
     try {
       const response = await fetchStreamWithError(`${this.baseUrl}/api/v1/assets/${assetId}/content`, {
         method: 'PUT',
-        headers: this.setCredentialsInHeader(),
+        headers: this._buildHeaders(),
         body: content,
       });
       return response.body;
@@ -337,7 +337,7 @@ export class Venue implements VenueInterface {
       try {
         const response =   await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
           method: 'POST',
-          headers: this.setCredentialsInHeader(),
+          headers: this._buildHeaders(),
           body: JSON.stringify(payload),
         });
         return response?.output;
@@ -359,7 +359,7 @@ export class Venue implements VenueInterface {
         try {
         const response =   await fetchWithError<any>(`${this.baseUrl}/api/v1/invoke/`, {
           method: 'POST',
-          headers: this.setCredentialsInHeader(),
+          headers: this._buildHeaders(),
           body: JSON.stringify(payload),
         });
         return new Job(response?.id, this, response);
@@ -368,17 +368,9 @@ export class Venue implements VenueInterface {
       }
     }
 
-    private setCredentialsInHeader() : any{  
-      if(this.credentials.userId && this.credentials.userId != "") {
-          return  (
-            {
-              'Content-Type': 'application/json',
-              'X-Covia-User' : this.credentials.userId
-            }
-          )
-      }
-      else {
-           return ( {'Content-Type': 'application/json'})
-          }
+    private _buildHeaders(): Record<string, string> {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      this.auth.apply(headers);
+      return headers;
     }
 } 

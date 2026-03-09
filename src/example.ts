@@ -1,5 +1,5 @@
 import { Venue, Asset, Operation, DataAsset, CoviaError, RunStatus } from './index';
-import { CredentialsHTTP } from './Credentials';
+import { BearerAuth } from './Credentials';
 import { Grid } from './Grid';
 
 
@@ -62,10 +62,10 @@ async function example() {
 
 // Example usage of the Covia API
 async function webExamples() {
-  const credentials = new CredentialsHTTP("grid.covia.ai", "my-api-key","my-userId");
+  const auth = new BearerAuth("my-api-key");
 
   // Connect to a Venue
-  const venue = await Grid.connect("grid.covia.ai", credentials);
+  const venue = await Grid.connect("grid.covia.ai", auth);
 
   // Get AI operation by cryptographic ID
   const op = await venue.getAsset("0xdcdda5950931489c1e7b1311dfe3321e6cb1e22cb306adfcf31aa030098e02c0");

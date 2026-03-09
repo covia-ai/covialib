@@ -27,11 +27,11 @@ describe('Grid', () => {
     expect(venue.venueId).toBe('did:web:example.com');
   });
 
-  it('connect passes credentials to Venue.connect', async () => {
-    const { CredentialsHTTP } = jest.requireActual('../Credentials');
-    const creds = new CredentialsHTTP('v', 'k', 'u');
-    await Grid.connect('https://creds-venue.example.com', creds);
-    expect(Venue.connect).toHaveBeenCalledWith('https://creds-venue.example.com', creds);
+  it('connect passes auth to Venue.connect', async () => {
+    const { CoviaUserAuth } = jest.requireActual('../Credentials');
+    const auth = new CoviaUserAuth('u');
+    await Grid.connect('https://auth-venue.example.com', auth);
+    expect(Venue.connect).toHaveBeenCalledWith('https://auth-venue.example.com', auth);
   });
 
   it('returns cached venue on second call with same ID', async () => {
